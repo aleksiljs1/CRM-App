@@ -145,10 +145,14 @@ export async function PATCH(
         }
       } else if (seniorRoles.includes(userRole)) {
         // Can do junior transitions + REVIEW->IN_PROGRESS (send back)
+        // If they are the assigned reviewer, they can also APPROVE
+        const isAssignedReviewer = task.assignedToId === session.user.id;
         const allowed =
           (currentStatus === "TODO" && status === "IN_PROGRESS") ||
           (currentStatus === "IN_PROGRESS" && status === "REVIEW") ||
-          (currentStatus === "REVIEW" && status === "IN_PROGRESS");
+          (currentStatus === "REVIEW" && status === "IN_PROGRESS") ||
+          (currentStatus === "REVIEW" && status === "APPROVED" && isAssignedReviewer) ||
+          (currentStatus === "APPROVED" && status === "COMPLETED" && false); // only managers complete
         if (!allowed) {
           return Response.json(
             { error: `Your role (${userRole}) cannot perform the transition: ${currentStatus} -> ${status}` },
@@ -174,6 +178,21 @@ export async function PATCH(
       if (status === "REVIEW") {
         // Task goes back to the department pool; manager must assign a reviewer
         data.assignedToId = null;
+      }
+
+      // ── Approved workflow: assign to the department manager for completion ──
+      if (status === "APPROVED" && task.department) {
+        const deptManager = await prisma.user.findFirst({
+          where: {
+            department: task.department as any,
+            role: "MANAGER",
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (deptManager) {
+          data.assignedToId = deptManager.id;
+        }
       }
 
       // ── Send-back workflow: REVIEW → IN_PROGRESS reassigns to original worker ──

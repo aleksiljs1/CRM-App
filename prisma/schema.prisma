@@ -89,9 +89,12 @@ model User {
   createdProcesses ProcessType[]      @relation("ProcessCreator")
   assignedTasks    Task[]             @relation("TaskAssignee")
   createdTasks     Task[]             @relation("TaskCreator")
-  statusChanges    TaskStatusHistory[] @relation("StatusChanges")
+  statusChanges    TaskStatusHistory[]  @relation("StatusChanges")
+  deptSettings     DepartmentSettings[] @relation("DeptSettingsUpdater")
   auditLogs        AuditLog[]
   notifications    Notification[]
+  conversations    ConversationParticipant[]
+  sentMessages     Message[] @relation("SentMessages")
 
   @@index([email])
   @@index([role])
@@ -326,4 +329,67 @@ model EmailAttachment {
   email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
 
   @@index([emailId])
+}
+
+model DepartmentSettings {
+  id                    String     @id @default(cuid())
+  department            Department @unique
+  autoAssignReviewHours Int        @default(24)
+  updatedAt             DateTime   @updatedAt
+  updatedById           String?
+
+  updatedBy User? @relation("DeptSettingsUpdater", fields: [updatedById], references: [id])
+}
+
+// ─── Chat Models ─────────────────────────────────────────────────────────────
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User               @relation("SentMessages", fields: [senderId], references: [id])
+  attachments  MessageAttachment[]
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+model MessageAttachment {
+  id        String @id @default(cuid())
+  messageId String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  mimeType  String
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }

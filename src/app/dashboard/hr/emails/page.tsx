@@ -61,7 +61,7 @@ interface Pagination {
   totalPages: number;
 }
 
-type Filter = "all" | "unread" | "read" | "unreplied" | "replied";
+type Filter = "all" | "unread" | "read" | "unreplied" | "replied" | "ordered";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -173,7 +173,9 @@ export default function HREmailsPage() {
   const [loadingEmails, setLoadingEmails] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [prioritizing, setPrioritizing] = useState(false);
+  const [orderedIds, setOrderedIds] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,15 +185,29 @@ export default function HREmailsPage() {
     async (page = 1) => {
       setLoadingEmails(true);
       try {
+        // "ordered" uses the stored orderedIds to sort, fetches unread from API
+        const apiFilter = filter === "ordered" ? "unread" : filter;
         const params: Record<string, string> = {
-          filter,
+          filter: apiFilter,
           page: String(page),
-          limit: "20",
+          limit: "50", // fetch more for ordered view
         };
         if (search.trim()) params.search = search;
 
         const { data } = await axios.get("/api/emails", { params });
-        setEmails(data.emails);
+        let resultEmails = data.emails;
+
+        // If ordered view, sort by the AI-ordered IDs
+        if (filter === "ordered" && orderedIds.length > 0) {
+          const idOrder = new Map(orderedIds.map((id, i) => [id, i]));
+          resultEmails = [...resultEmails].sort((a: Email, b: Email) => {
+            const posA = idOrder.get(a.id) ?? 999;
+            const posB = idOrder.get(b.id) ?? 999;
+            return posA - posB;
+          });
+        }
+
+        setEmails(resultEmails);
         setPagination(data.pagination);
       } catch {
         toast.error("Failed to load emails");
@@ -199,7 +215,7 @@ export default function HREmailsPage() {
         setLoadingEmails(false);
       }
     },
-    [filter, search]
+    [filter, search, orderedIds]
   );
 
   useEffect(() => {
@@ -293,19 +309,31 @@ export default function HREmailsPage() {
     }
   };
 
+  // ---- AI Enhance Reply ----
+  const handleEnhance = async () => {
+    if (!replyText.trim() || !selectedId) return;
+    setEnhancing(true);
+    try {
+      const { data } = await axios.post(`/api/emails/${selectedId}/enhance`, {
+        draft: replyText,
+      });
+      setReplyText(data.enhanced);
+      toast.success("Reply enhanced by AI");
+    } catch {
+      toast.error("AI enhancement failed");
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   // ---- AI Prioritize ----
   const handlePrioritize = async () => {
     setPrioritizing(true);
     try {
-      await axios.post("/api/emails/prioritize");
-      toast.success("Emails prioritized by AI");
-      await fetchEmails(1);
-      // Sort locally by importance
-      setEmails((prev) =>
-        [...prev].sort(
-          (a, b) => (b.aiImportance ?? 0) - (a.aiImportance ?? 0)
-        )
-      );
+      const { data } = await axios.post("/api/emails/prioritize");
+      setOrderedIds(data.orderedIds || []);
+      toast.success("AI has ordered your emails by importance");
+      setFilter("ordered");
     } catch {
       toast.error("AI prioritization failed");
     } finally {
@@ -358,7 +386,7 @@ export default function HREmailsPage() {
       {/* ------ Filter tabs + Search ------ */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
-          {(["all", "unread", "read", "unreplied", "replied"] as const).map((f) => (
+          {(["all", "unread", "read", "unreplied", "replied", ...(orderedIds.length > 0 ? ["ordered" as const] : [])] as const).map((f) => (
             <button
               key={f}
               onClick={() => {
@@ -371,7 +399,7 @@ export default function HREmailsPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {f === "unreplied" ? "Un-replied" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "unreplied" ? "Un-replied" : f === "ordered" ? "AI Ordered" : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
@@ -660,7 +688,8 @@ export default function HREmailsPage() {
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Write your reply..."
                   rows={3}
-                  className="w-full resize-none rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                  rows={5}
+                  className="w-full resize-y min-h-[120px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       handleReply();
@@ -718,18 +747,33 @@ export default function HREmailsPage() {
                     <Paperclip className="h-4 w-4" />
                     Attach
                   </Button>
-                  <Button
-                    onClick={handleReply}
-                    disabled={sendingReply || !replyText.trim()}
-                    className="gap-2 rounded-xl bg-[#00968a] px-5 py-3 text-white hover:bg-[#007d73]"
-                  >
-                    {sendingReply ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                    {sendingReply ? "Sending..." : "Send Reply"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleEnhance}
+                      disabled={enhancing || !replyText.trim()}
+                      variant="outline"
+                      className="gap-2 rounded-xl text-sm border-[#00968a] text-[#00968a] hover:bg-[#00968a]/10"
+                    >
+                      {enhancing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {enhancing ? "Enhancing..." : "Enhance with AI"}
+                    </Button>
+                    <Button
+                      onClick={handleReply}
+                      disabled={sendingReply || !replyText.trim()}
+                      className="gap-2 rounded-xl bg-[#00968a] px-5 py-3 text-white hover:bg-[#007d73]"
+                    >
+                      {sendingReply ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                      {sendingReply ? "Sending..." : "Send Reply"}
+                    </Button>
+                  </div>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground/50">
                   Press Ctrl+Enter to send
