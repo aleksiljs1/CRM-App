@@ -14,7 +14,22 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const search = searchParams.get("search") || "";
 
+    const userRole = session.user.role;
+    const userDept = session.user.department;
+    const isAdminOrPartner = userRole === "ADMIN" || userRole === "PARTNER";
+
     const where: any = {};
+
+    // Department-based filtering
+    if (!isAdminOrPartner) {
+      if (userRole === "MANAGER") {
+        // MANAGER: see clients where assignedTo user is in their department
+        where.assignedTo = { department: userDept };
+      } else {
+        // Others: see only clients assigned to them personally
+        where.assignedToId = session.user.id;
+      }
+    }
 
     if (status && ["LEAD", "ACTIVE", "INACTIVE"].includes(status)) {
       where.status = status;

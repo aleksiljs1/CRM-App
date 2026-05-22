@@ -24,6 +24,14 @@ export async function POST(
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Block CLIENT role from replying
+    if (session.user.role === "CLIENT") {
+      return Response.json(
+        { error: "Clients are not allowed to reply to emails" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const formData = await request.formData();
 
@@ -55,6 +63,18 @@ export async function POST(
 
     if (!originalEmail) {
       return Response.json({ error: "Email not found" }, { status: 404 });
+    }
+
+    // Department check: user must belong to the email's department (or be ADMIN/PARTNER)
+    const userRole = session.user.role;
+    const userDept = session.user.department;
+    const isAdminOrPartner = userRole === "ADMIN" || userRole === "PARTNER";
+
+    if (!isAdminOrPartner && originalEmail.recipientDept !== userDept) {
+      return Response.json(
+        { error: "You do not have permission to reply to this email" },
+        { status: 403 }
+      );
     }
 
     // Save files to disk

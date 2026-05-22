@@ -53,6 +53,15 @@ export async function middleware(request: NextRequest) {
         new URL(getDefaultDashboard(role), request.url)
       );
     }
+
+    if (
+      pathname.startsWith("/dashboard/manager") &&
+      !["ADMIN", "PARTNER", "MANAGER"].includes(role)
+    ) {
+      return NextResponse.redirect(
+        new URL("/dashboard/hr", request.url)
+      );
+    }
   }
 
   return NextResponse.next();

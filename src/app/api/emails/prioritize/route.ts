@@ -10,6 +10,14 @@ export async function POST() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const allowedRoles = ["ADMIN", "PARTNER", "MANAGER"];
+    if (!allowedRoles.includes(session.user.role)) {
+      return Response.json(
+        { error: "Forbidden: only ADMIN, PARTNER, or MANAGER can prioritize emails" },
+        { status: 403 }
+      );
+    }
+
     const department = session.user.department;
     const role = session.user.role;
     const isAdmin = role === "ADMIN" || role === "PARTNER";

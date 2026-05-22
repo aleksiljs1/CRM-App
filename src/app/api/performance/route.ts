@@ -182,6 +182,14 @@ export async function GET() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const allowedRoles = ["ADMIN", "PARTNER", "MANAGER"];
+    if (!allowedRoles.includes(session.user.role)) {
+      return Response.json(
+        { error: "Forbidden: only ADMIN, PARTNER, or MANAGER can access performance data" },
+        { status: 403 }
+      );
+    }
+
     const data = await getPerformanceData();
     return Response.json(data);
   } catch (error) {

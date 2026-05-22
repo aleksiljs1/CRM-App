@@ -297,15 +297,24 @@ function TaskDetailModal({
   task,
   onClose,
   onStatusChange,
+  userRole,
 }: {
   task: Task;
   onClose: () => void;
   onStatusChange: (taskId: string, newStatus: string) => void;
+  userRole: string;
 }) {
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
-  const nextStatus = NEXT_STATUS[task.status];
-  const canSendBack = task.status === "REVIEW";
-  const canReset = task.status !== "TODO";
+  const isManagerPlusRole = ["ADMIN", "PARTNER", "MANAGER"].includes(userRole);
+  const rawNextStatus = NEXT_STATUS[task.status];
+  // Workers (SENIOR and below) can only: TODO->IN_PROGRESS, IN_PROGRESS->REVIEW
+  const nextStatus = rawNextStatus
+    ? (isManagerPlusRole || rawNextStatus === "IN_PROGRESS" || rawNextStatus === "REVIEW"
+        ? rawNextStatus
+        : null)
+    : null;
+  const canSendBack = task.status === "REVIEW" && isManagerPlusRole;
+  const canReset = task.status !== "TODO" && isManagerPlusRole;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -710,6 +719,8 @@ export default function HRTasksPage() {
   const dept = session?.user?.department || null;
   const role = session?.user?.role || "";
   const canCreateTasks = ["ADMIN", "PARTNER", "MANAGER"].includes(role);
+  const isManagerPlus = ["ADMIN", "PARTNER", "MANAGER"].includes(role);
+  const canViewDepartment = ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE"].includes(role);
   const deptDisplayName = getDeptName(dept);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -723,13 +734,14 @@ export default function HRTasksPage() {
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"mine" | "department">("department");
+  const [viewMode, setViewMode] = useState<"mine" | "department">(isManagerPlus ? "department" : "mine");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     try {
-      const params: Record<string, string> = { mine: viewMode === "mine" ? "true" : "false" };
+      const effectiveMine = !canViewDepartment || viewMode === "mine";
+      const params: Record<string, string> = { mine: effectiveMine ? "true" : "false" };
       if (search.trim()) params.search = search;
 
       const res = await axios.get("/api/tasks", { params });
@@ -784,28 +796,30 @@ export default function HRTasksPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
-            <button
-              onClick={() => setViewMode("mine")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                viewMode === "mine"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              My Tasks
-            </button>
-            <button
-              onClick={() => setViewMode("department")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
-                viewMode === "department"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All {deptDisplayName}
-            </button>
-          </div>
+          {canViewDepartment && (
+            <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+              <button
+                onClick={() => setViewMode("mine")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  viewMode === "mine"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                My Tasks
+              </button>
+              <button
+                onClick={() => setViewMode("department")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  viewMode === "department"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All {deptDisplayName}
+              </button>
+            </div>
+          )}
           {canCreateTasks && (
             <Button
               className="bg-[#00968a] hover:bg-[#007a70] text-white"
@@ -904,6 +918,7 @@ export default function HRTasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleStatusChange}
+          userRole={role}
         />
       )}
       {showNewForm && (

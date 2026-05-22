@@ -20,6 +20,18 @@ import crypto from "crypto";
  */
 export async function POST(request: Request) {
   try {
+    // Webhook API key check
+    const webhookSecret = process.env.WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const providedKey = request.headers.get("x-webhook-key");
+      if (providedKey !== webhookSecret) {
+        return Response.json(
+          { error: "Invalid or missing webhook key" },
+          { status: 401 }
+        );
+      }
+    }
+
     const contentType = request.headers.get("content-type") || "";
 
     let senderEmail = "";

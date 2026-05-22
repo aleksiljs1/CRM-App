@@ -351,7 +351,7 @@ export default function HREmailsPage() {
           ) : (
             <Sparkles className="h-4 w-4 text-[#00968a]" />
           )}
-          {prioritizing ? "Analyzing..." : "Order by Important"}
+          {prioritizing ? "Analyzing..." : "Sort by Importance"}
         </Button>
       </div>
 

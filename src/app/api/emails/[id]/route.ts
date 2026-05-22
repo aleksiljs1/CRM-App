@@ -22,6 +22,18 @@ export async function GET(
       return Response.json({ error: "Email not found" }, { status: 404 });
     }
 
+    // Permission check: ADMIN/PARTNER can view all, others must match department
+    const userRole = session.user.role;
+    const userDept = session.user.department;
+    const isAdminOrPartner = userRole === "ADMIN" || userRole === "PARTNER";
+
+    if (!isAdminOrPartner && email.recipientDept !== userDept) {
+      return Response.json(
+        { error: "You do not have permission to view this email" },
+        { status: 403 }
+      );
+    }
+
     // Mark all incoming unread emails in this thread as read
     await prisma.email.updateMany({
       where: {

@@ -50,6 +50,18 @@ export async function GET(
       return Response.json({ error: "Task not found" }, { status: 404 });
     }
 
+    // Department check: user must belong to the task's department (or be ADMIN/PARTNER)
+    const userRole = session.user.role;
+    const userDept = session.user.department;
+    const isAdminOrPartner = userRole === "ADMIN" || userRole === "PARTNER";
+
+    if (!isAdminOrPartner && task.department && task.department !== userDept) {
+      return Response.json(
+        { error: "You do not have permission to view this task" },
+        { status: 403 }
+      );
+    }
+
     return Response.json({ task });
   } catch (error) {
     console.error("Error fetching task:", error);
@@ -82,6 +94,18 @@ export async function PATCH(
       return Response.json({ error: "Task not found" }, { status: 404 });
     }
 
+    // Department check: user must belong to the task's department (or be ADMIN/PARTNER)
+    const userRole = session.user.role;
+    const userDept = session.user.department;
+    const isAdminOrPartner = userRole === "ADMIN" || userRole === "PARTNER";
+
+    if (!isAdminOrPartner && task.department && task.department !== userDept) {
+      return Response.json(
+        { error: "You do not have permission to update this task" },
+        { status: 403 }
+      );
+    }
+
     // Validate workflow transition
     if (status) {
       const currentStatus = task.status;
@@ -102,6 +126,37 @@ export async function PATCH(
           { status: 400 }
         );
       }
+
+      // Role-based status transition restrictions
+      const juniorRoles = ["JUNIOR", "ASSISTANT", "INTERN"];
+      const seniorRoles = ["SENIOR", "ASSOCIATE"];
+      const managerRoles = ["MANAGER", "PARTNER", "ADMIN"];
+
+      if (juniorRoles.includes(userRole)) {
+        // Can only: TODO->IN_PROGRESS, IN_PROGRESS->REVIEW
+        const allowed =
+          (currentStatus === "TODO" && status === "IN_PROGRESS") ||
+          (currentStatus === "IN_PROGRESS" && status === "REVIEW");
+        if (!allowed) {
+          return Response.json(
+            { error: `Your role (${userRole}) cannot perform the transition: ${currentStatus} -> ${status}` },
+            { status: 403 }
+          );
+        }
+      } else if (seniorRoles.includes(userRole)) {
+        // Can do junior transitions + REVIEW->IN_PROGRESS (send back)
+        const allowed =
+          (currentStatus === "TODO" && status === "IN_PROGRESS") ||
+          (currentStatus === "IN_PROGRESS" && status === "REVIEW") ||
+          (currentStatus === "REVIEW" && status === "IN_PROGRESS");
+        if (!allowed) {
+          return Response.json(
+            { error: `Your role (${userRole}) cannot perform the transition: ${currentStatus} -> ${status}` },
+            { status: 403 }
+          );
+        }
+      }
+      // MANAGER, PARTNER, ADMIN can do ALL transitions (no restriction needed)
     }
 
     const data: Record<string, unknown> = {};

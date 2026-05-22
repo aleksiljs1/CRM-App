@@ -10,6 +10,14 @@ export async function POST() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const allowedRoles = ["ADMIN", "PARTNER", "MANAGER"];
+    if (!allowedRoles.includes(session.user.role)) {
+      return Response.json(
+        { error: "Forbidden: only ADMIN, PARTNER, or MANAGER can trigger AI review" },
+        { status: 403 }
+      );
+    }
+
     const performanceData = await getPerformanceData();
 
     const prompt = `You are an HR performance analyst for Kreston Albania, a professional services firm.

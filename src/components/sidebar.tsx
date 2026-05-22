@@ -29,21 +29,25 @@ const navItems: NavItem[] = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Emails",
     href: "/dashboard/hr/emails",
     icon: Mail,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Tasks",
     href: "/dashboard/hr/tasks",
     icon: CheckSquare,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Documents",
     href: "/dashboard/hr/documents",
     icon: FileText,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "My Performance",

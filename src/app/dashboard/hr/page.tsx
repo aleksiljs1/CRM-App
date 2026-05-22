@@ -82,7 +82,9 @@ export default async function HRDashboardPage() {
 
   const deptDisplayName = getDeptName(department);
 
-  const stats = [
+  const isJuniorRole = ["JUNIOR", "ASSISTANT", "INTERN"].includes(role || "");
+
+  const allStats = [
     {
       label: "Unread Emails",
       value: unreadEmailCount,
@@ -94,6 +96,7 @@ export default async function HRDashboardPage() {
       value: totalClients,
       icon: Users,
       href: "/dashboard/hr/clients",
+      hideForJunior: true,
     },
     {
       label: "Pending Tasks",
@@ -106,8 +109,11 @@ export default async function HRDashboardPage() {
       value: openProcesses,
       icon: FileText,
       href: "/dashboard/hr/processes",
+      hideForJunior: true,
     },
   ];
+
+  const stats = allStats.filter((s) => !(isJuniorRole && s.hideForJunior));
 
   return (
     <div className="space-y-6">

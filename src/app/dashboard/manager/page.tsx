@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +33,11 @@ const DEPT_LABELS: Record<string, string> = {
   FINANCE: "Finance",
 };
 
+function getDeptName(dept: string | null | undefined): string {
+  if (!dept) return "Firm-Wide";
+  return DEPT_LABELS[dept] || dept;
+}
+
 function timeAgo(date: Date): string {
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -54,6 +62,21 @@ function formatDate(date: Date): string {
 // -- Page Component -----------------------------------------------------------
 
 export default async function ManagerDashboardPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  const role = session.user.role;
+  const department = session.user.department;
+  const isAdmin = role === "ADMIN" || role === "PARTNER";
+
+  // Build department-scoped filters
+  const deptFilter = isAdmin ? {} : { department: (department || "HR") as string };
+  const taskDeptFilter = isAdmin ? {} : { department: (department || "HR") as string };
+  const emailDeptFilter = isAdmin ? {} : { recipientDept: (department || "HR") as string };
+
   const now = new Date();
 
   const [
@@ -72,51 +95,93 @@ export default async function ManagerDashboardPage() {
     recentCompletedTasks,
     upcomingDeadlines,
   ] = await Promise.all([
-    // KPI counts
+    // KPI counts — scoped by department for MANAGER
     prisma.user.count({
-      where: { isActive: true, role: { not: "CLIENT" } },
+      where: { isActive: true, role: { not: "CLIENT" }, ...deptFilter },
     }),
-    prisma.client.count({ where: { status: "ACTIVE" } }),
-    prisma.task.count({ where: { status: { not: "COMPLETED" } } }),
-    prisma.task.count(),
-    prisma.task.count({ where: { status: "COMPLETED" } }),
-    prisma.email.count({ where: { isIncoming: true, isRead: false } }),
+    prisma.client.count({
+      where: {
+        status: "ACTIVE",
+        ...(isAdmin
+          ? {}
+          : { assignedTo: { department: (department || "HR") as string } }),
+      },
+    }),
+    prisma.task.count({
+      where: { status: { not: "COMPLETED" }, ...taskDeptFilter },
+    }),
+    prisma.task.count({ where: { ...taskDeptFilter } }),
+    prisma.task.count({ where: { status: "COMPLETED", ...taskDeptFilter } }),
+    prisma.email.count({
+      where: { isIncoming: true, isRead: false, ...emailDeptFilter },
+    }),
     prisma.clientSubmission.count({
-      where: { status: { in: ["INCOMPLETE", "UNDER_REVIEW"] } },
+      where: {
+        status: { in: ["INCOMPLETE", "UNDER_REVIEW"] },
+        ...(isAdmin
+          ? {}
+          : { processType: { department: (department || "HR") as string } }),
+      },
     }),
 
     // Chart data
     prisma.task.groupBy({
       by: ["department"],
       _count: { id: true },
-      where: { department: { not: null } },
+      where: { department: { not: null }, ...taskDeptFilter },
     }),
     prisma.client.groupBy({
       by: ["status"],
       _count: { id: true },
+      ...(isAdmin
+        ? {}
+        : {
+            where: {
+              assignedTo: { department: (department || "HR") as string },
+            },
+          }),
     }),
 
     // Department workload
     prisma.user.groupBy({
       by: ["department"],
       _count: { id: true },
-      where: { isActive: true, role: { not: "CLIENT" }, department: { not: null } },
+      where: {
+        isActive: true,
+        role: { not: "CLIENT" },
+        department: { not: null },
+        ...deptFilter,
+      },
     }),
     prisma.task.groupBy({
       by: ["department"],
       _count: { id: true },
-      where: { status: { not: "COMPLETED" }, department: { not: null } },
+      where: {
+        status: { not: "COMPLETED" },
+        department: { not: null },
+        ...taskDeptFilter,
+      },
     }),
 
     // Recent activity
     prisma.email.findMany({
-      where: { isIncoming: true },
+      where: { isIncoming: true, ...emailDeptFilter },
       orderBy: { createdAt: "desc" },
       take: 5,
-      select: { id: true, subject: true, senderName: true, senderEmail: true, createdAt: true },
+      select: {
+        id: true,
+        subject: true,
+        senderName: true,
+        senderEmail: true,
+        createdAt: true,
+      },
     }),
     prisma.task.findMany({
-      where: { status: "COMPLETED", completedAt: { not: null } },
+      where: {
+        status: "COMPLETED",
+        completedAt: { not: null },
+        ...taskDeptFilter,
+      },
       orderBy: { completedAt: "desc" },
       take: 3,
       select: {
@@ -132,6 +197,7 @@ export default async function ManagerDashboardPage() {
       where: {
         deadline: { gte: now },
         status: { not: "COMPLETED" },
+        ...taskDeptFilter,
       },
       orderBy: { deadline: "asc" },
       take: 5,
@@ -146,7 +212,8 @@ export default async function ManagerDashboardPage() {
     }),
   ]);
 
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const completionRate =
+    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Transform chart data
   const tasksByDeptChart = tasksByDept.map((item) => ({
@@ -233,15 +300,21 @@ export default async function ManagerDashboardPage() {
     LOW: "bg-green-100 text-green-700 border-green-200",
   };
 
+  const deptDisplayName = isAdmin
+    ? "Firm-Wide"
+    : getDeptName(department);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
-          Management Dashboard
+          {deptDisplayName} Management Dashboard
         </h1>
         <p className="text-muted-foreground mt-1">
-          Firm-wide overview and analytics
+          {isAdmin
+            ? "Firm-wide overview and analytics"
+            : `Department overview for ${deptDisplayName}`}
         </p>
       </div>
 
@@ -461,10 +534,10 @@ export default async function ManagerDashboardPage() {
                     {task.assignedTo?.name ?? "Unassigned"}
                   </span>
                   <span className="text-muted-foreground">
-                    {DEPT_LABELS[task.department ?? ""] ?? "—"}
+                    {DEPT_LABELS[task.department ?? ""] ?? "\u2014"}
                   </span>
                   <span className="text-right font-medium">
-                    {task.deadline ? formatDate(task.deadline) : "—"}
+                    {task.deadline ? formatDate(task.deadline) : "\u2014"}
                   </span>
                 </div>
               ))}
