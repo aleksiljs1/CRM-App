@@ -8,6 +8,7 @@ import {
   Mail,
   CheckSquare,
   FileText,
+  MessageSquare,
   Users,
   BarChart3,
   TrendingUp,
@@ -50,6 +51,12 @@ const navItems: NavItem[] = [
     roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
+    label: "Chats",
+    href: "/dashboard/hr/chats",
+    icon: MessageSquare,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
+  },
+  {
     label: "My Performance",
     href: "/dashboard/hr/performance",
     icon: Award,
@@ -86,10 +93,10 @@ const navItems: NavItem[] = [
     roles: ["ADMIN", "PARTNER", "MANAGER"],
   },
   {
-    label: "Settings",
-    href: "/dashboard/admin",
+    label: "Dept Settings",
+    href: "/dashboard/manager/settings",
     icon: Settings,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "PARTNER", "MANAGER"],
   },
 ];
 

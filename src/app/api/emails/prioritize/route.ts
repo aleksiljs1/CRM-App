@@ -25,6 +25,7 @@ export async function POST() {
     const emailWhere: any = {
       isIncoming: true,
       isReplied: false,
+      isRead: false,
     };
 
     if (!isAdmin && department) {
@@ -39,50 +40,49 @@ export async function POST() {
     });
 
     if (emails.length === 0) {
-      return Response.json([]);
+      return Response.json({ orderedIds: [], prioritized: [] });
     }
 
     const deptLabel = department || "all departments";
-    const prompt = `You are an email priority assistant for the ${deptLabel} department at a professional services firm.
-Rank these unread emails by urgency from 1 (least urgent) to 100 (most urgent).
+    const prompt = `You are an email priority assistant for the ${deptLabel} department at Kreston Albania, a professional services firm.
+
+You are given ${emails.length} unread emails. Your job is to ORDER them from MOST URGENT to LEAST URGENT.
 
 Consider:
-- Keywords indicating urgency (urgent, deadline, error, asap, overdue, correction, legal)
-- Time elapsed since received (older unresponded emails are more urgent)
-- Business impact
+- Keywords: urgent, deadline, error, asap, overdue, correction, legal, compliance, tax deadline
+- Time elapsed since received (older = more urgent, they've been waiting longer)
+- Business impact (payroll errors > general questions)
+- Client importance
 
 Emails:
-${emails.map((e) => `ID: ${e.id} | From: ${e.senderName} | Subject: ${e.subject} | Body: ${e.body} | Received: ${e.createdAt}`).join("\n")}
+${emails.map((e) => `ID: ${e.id} | From: ${e.senderName} | Subject: ${e.subject} | Received: ${e.createdAt} | Body: ${e.body.slice(0, 200)}`).join("\n")}
 
-Return ONLY a JSON array, no other text:
-[{"emailId": "...", "importance": 85, "reason": "Contains urgent payroll correction request"}]`;
+Return ONLY a JSON array of email IDs in order from most urgent to least urgent. Nothing else:
+["id1", "id2", "id3"]`;
 
     const aiResponse = await askGemini(prompt);
 
-    // Extract JSON from AI response (handle markdown code blocks)
+    // Extract JSON from AI response
     let jsonStr = aiResponse;
     const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (codeBlockMatch) {
       jsonStr = codeBlockMatch[1].trim();
     }
 
-    const prioritized: Array<{
-      emailId: string;
-      importance: number;
-      reason: string;
-    }> = JSON.parse(jsonStr);
+    const orderedIds: string[] = JSON.parse(jsonStr);
 
-    // Update each email's aiImportance in the DB
+    // Update aiImportance based on position (first = 100, last = 1)
+    const total = orderedIds.length;
     await Promise.all(
-      prioritized.map((item) =>
+      orderedIds.map((emailId, index) =>
         prisma.email.update({
-          where: { id: item.emailId },
-          data: { aiImportance: item.importance },
+          where: { id: emailId },
+          data: { aiImportance: Math.round(100 - (index / Math.max(total - 1, 1)) * 99) },
         })
       )
     );
 
-    return Response.json(prioritized);
+    return Response.json({ orderedIds });
   } catch (error) {
     console.error("Error prioritizing emails:", error);
     return Response.json(
