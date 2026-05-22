@@ -88,6 +88,7 @@ model User {
   createdProcesses ProcessType[]      @relation("ProcessCreator")
   assignedTasks    Task[]             @relation("TaskAssignee")
   createdTasks     Task[]             @relation("TaskCreator")
+  statusChanges    TaskStatusHistory[] @relation("StatusChanges")
   auditLogs        AuditLog[]
   notifications    Notification[]
 
@@ -234,9 +235,11 @@ model Task {
   completedAt  DateTime?
 
   // Relations
-  assignedTo User?   @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdBy  User    @relation("TaskCreator", fields: [createdById], references: [id])
-  client     Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  assignedTo     User?              @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy      User               @relation("TaskCreator", fields: [createdById], references: [id])
+  client         Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  attachments    TaskAttachment[]
+  statusHistory  TaskStatusHistory[]
 
   @@index([assignedToId])
   @@index([createdById])
@@ -244,6 +247,22 @@ model Task {
   @@index([status])
   @@index([department])
   @@index([priority])
+}
+
+model TaskStatusHistory {
+  id          String   @id @default(cuid())
+  taskId      String
+  fromStatus  String?
+  toStatus    String
+  changedById String
+  changedAt   DateTime @default(now())
+
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy User @relation("StatusChanges", fields: [changedById], references: [id])
+
+  @@index([taskId])
+  @@index([changedById])
+  @@index([changedAt])
 }
 
 model AuditLog {
@@ -278,6 +297,20 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([type])
+}
+
+model TaskAttachment {
+  id        String   @id @default(cuid())
+  taskId    String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model EmailAttachment {

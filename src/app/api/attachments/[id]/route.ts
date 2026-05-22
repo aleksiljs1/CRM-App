@@ -16,7 +16,12 @@ export async function GET(
 
     const { id } = await params;
 
-    const attachment = await prisma.emailAttachment.findUnique({
+    // Try EmailAttachment first, then TaskAttachment
+    const emailAttachment = await prisma.emailAttachment.findUnique({
+      where: { id },
+    });
+
+    const attachment = emailAttachment ?? await prisma.taskAttachment.findUnique({
       where: { id },
     });
 
@@ -29,17 +34,15 @@ export async function GET(
 
     const filePath = path.join(process.cwd(), "public", attachment.filePath);
 
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await readFile(filePath);
-    } catch {
+    const fileBuffer = await readFile(filePath).catch(() => null);
+    if (!fileBuffer) {
       return Response.json(
         { error: "File not found on disk" },
         { status: 404 }
       );
     }
 
-    return new Response(fileBuffer, {
+    return new Response(new Uint8Array(fileBuffer), {
       headers: {
         "Content-Type": attachment.mimeType,
         "Content-Disposition": `attachment; filename="${attachment.fileName}"`,

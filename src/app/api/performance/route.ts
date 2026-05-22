@@ -18,6 +18,9 @@ export interface PerformanceData {
   avgTasksPerMonth: number;
   emailsHandled: number;
   clientsManaged: number;
+  avgPickupTime: number;
+  avgCycleTime: number;
+  revisionCount: number;
 }
 
 export async function getPerformanceData(): Promise<PerformanceData[]> {
@@ -87,17 +90,62 @@ export async function getPerformanceData(): Promise<PerformanceData[]> {
       where: { assignedToId: user.id, status: "ACTIVE" },
     });
 
+    // Status history metrics
+    // avgPickupTime: average hours from task creation to first TODO -> IN_PROGRESS
+    const pickupRecords = await prisma.taskStatusHistory.findMany({
+      where: {
+        toStatus: "IN_PROGRESS",
+        fromStatus: "TODO",
+        task: { assignedToId: user.id },
+      },
+      include: { task: { select: { createdAt: true } } },
+    });
+
+    let avgPickupTime = 0;
+    if (pickupRecords.length > 0) {
+      const totalPickupHours = pickupRecords.reduce((sum, r) => {
+        const hours = (r.changedAt.getTime() - r.task.createdAt.getTime()) / (1000 * 60 * 60);
+        return sum + hours;
+      }, 0);
+      avgPickupTime = Math.round((totalPickupHours / pickupRecords.length) * 10) / 10;
+    }
+
+    // avgCycleTime: average hours from creation to COMPLETED
+    let avgCycleTime = 0;
+    const completedWithTime = completedTasks.filter((t) => t.completedAt);
+    if (completedWithTime.length > 0) {
+      const totalCycleHours = completedWithTime.reduce((sum, t) => {
+        const hours = (t.completedAt!.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
+        return sum + hours;
+      }, 0);
+      avgCycleTime = Math.round((totalCycleHours / completedWithTime.length) * 10) / 10;
+    }
+
+    // revisionCount: REVIEW -> IN_PROGRESS transitions (sent back for rework)
+    const revisionCount = await prisma.taskStatusHistory.count({
+      where: {
+        toStatus: "IN_PROGRESS",
+        fromStatus: "REVIEW",
+        task: { assignedToId: user.id },
+      },
+    });
+
     // Calculate performance score
     const completionRate = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
     const highPriorityRatio =
       tasksCompleted > 0 ? (highPriorityCompleted / tasksCompleted) * 100 : 0;
 
+    const pickupSpeed = Math.max(0, 100 - avgPickupTime * 2);
+    const qualityScore = Math.max(0, 100 - revisionCount * 20);
+
     const performanceScore = Math.round(
-      completionRate * 0.3 +
-        onTimeRate * 0.25 +
-        highPriorityRatio * 0.2 +
-        Math.min(avgTasksPerMonth * 5, 100) * 0.15 +
-        Math.min(emailsHandled * 2, 100) * 0.1
+      completionRate * 0.25 +
+        onTimeRate * 0.20 +
+        highPriorityRatio * 0.15 +
+        Math.min(avgTasksPerMonth * 5, 100) * 0.10 +
+        Math.min(emailsHandled * 2, 100) * 0.10 +
+        pickupSpeed * 0.10 +
+        qualityScore * 0.10
     );
 
     results.push({
@@ -116,6 +164,9 @@ export async function getPerformanceData(): Promise<PerformanceData[]> {
       avgTasksPerMonth,
       emailsHandled,
       clientsManaged,
+      avgPickupTime,
+      avgCycleTime,
+      revisionCount,
     });
   }
 

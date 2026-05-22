@@ -38,6 +38,11 @@ export async function GET(
         client: {
           select: { id: true, companyName: true },
         },
+        attachments: true,
+        statusHistory: {
+          include: { changedBy: { select: { id: true, name: true } } },
+          orderBy: { changedAt: "asc" },
+        },
       },
     });
 
@@ -109,6 +114,15 @@ export async function PATCH(
       } else if (task.status === "COMPLETED" && status !== "COMPLETED") {
         data.completedAt = null;
       }
+
+      // Create status history record alongside the update
+      data.statusHistory = {
+        create: {
+          fromStatus: task.status,
+          toStatus: status,
+          changedById: session.user.id,
+        },
+      };
     }
 
     if (assignedToId !== undefined) {
@@ -127,6 +141,11 @@ export async function PATCH(
         },
         client: {
           select: { id: true, companyName: true },
+        },
+        attachments: true,
+        statusHistory: {
+          include: { changedBy: { select: { id: true, name: true } } },
+          orderBy: { changedAt: "asc" },
         },
       },
     });

@@ -52,6 +52,55 @@ async function main() {
       role: "MANAGER" as const,
       department: "AUDIT" as const,
     },
+    {
+      email: "audit.senior@kreston.al",
+      name: "Audit Senior",
+      password: "audit123",
+      role: "SENIOR" as const,
+      department: "AUDIT" as const,
+    },
+    {
+      email: "legal.manager@kreston.al",
+      name: "Legal Manager",
+      password: "legal123",
+      role: "MANAGER" as const,
+      department: "LEGAL" as const,
+    },
+    {
+      email: "legal.associate@kreston.al",
+      name: "Legal Associate",
+      password: "legal123",
+      role: "ASSOCIATE" as const,
+      department: "LEGAL" as const,
+    },
+    {
+      email: "tax.manager@kreston.al",
+      name: "Tax Manager",
+      password: "tax123",
+      role: "MANAGER" as const,
+      department: "ACCOUNTING_TAX" as const,
+    },
+    {
+      email: "tax.junior@kreston.al",
+      name: "Tax Junior",
+      password: "tax123",
+      role: "JUNIOR" as const,
+      department: "ACCOUNTING_TAX" as const,
+    },
+    {
+      email: "payroll.manager@kreston.al",
+      name: "Payroll Manager",
+      password: "payroll123",
+      role: "MANAGER" as const,
+      department: "BOOKKEEPING_PAYROLL" as const,
+    },
+    {
+      email: "advisory.manager@kreston.al",
+      name: "Advisory Manager",
+      password: "advisory123",
+      role: "MANAGER" as const,
+      department: "ADVISORY" as const,
+    },
   ];
 
   for (const userData of users) {

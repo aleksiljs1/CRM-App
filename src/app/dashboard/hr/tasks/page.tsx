@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Search,
   Loader2,
+  Paperclip,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -34,6 +35,14 @@ interface TaskUser {
 interface TaskClient {
   id: string;
   companyName: string;
+}
+
+interface TaskStatusHistoryEntry {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  changedAt: string;
+  changedBy?: { id: string; name: string };
 }
 
 interface Task {
@@ -53,6 +62,8 @@ interface Task {
   assignedTo: TaskUser | null;
   createdBy: TaskUser;
   client: TaskClient | null;
+  attachments?: { id: string; fileName: string; filePath: string; fileSize: number; mimeType: string; }[];
+  statusHistory?: TaskStatusHistoryEntry[];
 }
 
 interface Counts {
@@ -62,6 +73,16 @@ interface Counts {
   approved: number;
   completed: number;
   overdue: number;
+}
+
+interface TeamMember {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    department: string | null;
+  };
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -153,6 +174,20 @@ function formatDeadline(deadline: string | null): {
   };
 }
 
+function timeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 // ─── Task Card ──────────────────────────────────────────────────────────────
 
 function TaskCard({
@@ -201,9 +236,17 @@ function TaskCard({
           )}
           {deadlineText}
         </span>
-        {task.assignedTo && (
-          <span className="truncate ml-2">{task.assignedTo.name.split(" ")[0]}</span>
-        )}
+        <div className="flex items-center gap-2 ml-2">
+          {task.attachments && task.attachments.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Paperclip className="h-3 w-3" />
+              <span>{task.attachments.length}</span>
+            </div>
+          )}
+          <span className="truncate">
+            {task.assignedTo ? task.assignedTo.name.split(" ")[0] : "Unassigned"}
+          </span>
+        </div>
       </div>
     </Card>
   );
@@ -343,6 +386,40 @@ function TaskDetailModal({
             )}
           </div>
 
+          {/* Attachments */}
+          {task.attachments && task.attachments.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <h4 className="text-sm font-medium">Attachments</h4>
+              <div className="flex flex-wrap gap-2">
+                {task.attachments.map((att: any) => (
+                  <a key={att.id} href={`/api/attachments/${att.id}`} target="_blank"
+                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border rounded-lg text-xs hover:bg-gray-100 transition-colors">
+                    <Paperclip className="h-3 w-3" />
+                    <span className="max-w-[150px] truncate">{att.fileName}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Status Timeline */}
+          {task.statusHistory && task.statusHistory.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Status Timeline</h4>
+              <div className="space-y-2">
+                {task.statusHistory.map((h: TaskStatusHistoryEntry) => (
+                  <div key={h.id} className="flex items-center gap-3 text-xs">
+                    <span className="text-muted-foreground w-24 shrink-0">{timeAgo(h.changedAt)}</span>
+                    <span className="font-medium">
+                      {h.fromStatus ? `${h.fromStatus} → ${h.toStatus}` : `Created as ${h.toStatus}`}
+                    </span>
+                    <span className="text-muted-foreground">by {h.changedBy?.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <Separator className="my-4" />
 
           {/* Actions */}
@@ -396,19 +473,55 @@ function NewTaskForm({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [deadline, setDeadline] = useState("");
+  const [assignToId, setAssignToId] = useState<string>("");
+  const [taskAttachments, setTaskAttachments] = useState<File[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function fetchTeam() {
+      try {
+        const res = await axios.get("/api/team");
+        setTeamMembers(res.data.team || []);
+      } catch {
+        // Team fetch may fail for non-manager roles, that's ok
+        setTeamMembers([]);
+      }
+    }
+    fetchTeam();
+  }, []);
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) {
+      setTaskAttachments((prev) => [...prev, ...Array.from(e.target.files!)]);
+    }
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removeFile(index: number) {
+    setTaskAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
     setSubmitting(true);
     try {
-      await axios.post("/api/tasks", {
-        title,
-        description: description || undefined,
-        priority,
-        deadline: deadline || undefined,
+      const formData = new FormData();
+      formData.append("title", title);
+      if (description) formData.append("description", description);
+      formData.append("priority", priority);
+      if (deadline) formData.append("deadline", deadline);
+      formData.append("assignedToId", assignToId);
+      for (const file of taskAttachments) {
+        formData.append("attachments", file);
+      }
+      await axios.post("/api/tasks", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
+      setTaskAttachments([]);
       onCreated();
       onClose();
     } catch (err) {
@@ -420,7 +533,7 @@ function NewTaskForm({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">New Task</h2>
@@ -486,6 +599,71 @@ function NewTaskForm({
                 />
               </div>
             </div>
+
+            {/* Assign to dropdown */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Assign to
+              </label>
+              <select
+                value={assignToId}
+                onChange={(e) => setAssignToId(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent"
+              >
+                <option value="">Unassigned (anyone can pick up)</option>
+                {teamMembers.map((tm) => (
+                  <option key={tm.user.id} value={tm.user.id}>
+                    {tm.user.name} - {tm.user.role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* File attachments */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Attachments
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Paperclip className="w-4 h-4 mr-1" />
+                {taskAttachments.length > 0
+                  ? `${taskAttachments.length} file(s) attached`
+                  : "Attach Files"}
+              </Button>
+              {taskAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3 p-3 bg-gray-50 rounded-lg border">
+                  {taskAttachments.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border rounded-lg text-xs shadow-sm"
+                    >
+                      <Paperclip className="h-3.5 w-3.5 text-[#00968a]" />
+                      <span className="max-w-[180px] truncate font-medium">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(idx)}
+                        className="ml-1 text-gray-400 hover:text-red-500"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
@@ -530,6 +708,8 @@ function getDeptName(dept: string | null): string {
 export default function HRTasksPage() {
   const { data: session } = useSession();
   const dept = session?.user?.department || null;
+  const role = session?.user?.role || "";
+  const canCreateTasks = ["ADMIN", "PARTNER", "MANAGER"].includes(role);
   const deptDisplayName = getDeptName(dept);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -543,12 +723,13 @@ export default function HRTasksPage() {
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"mine" | "department">("department");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     try {
-      const params: Record<string, string> = { mine: "true" };
+      const params: Record<string, string> = { mine: viewMode === "mine" ? "true" : "false" };
       if (search.trim()) params.search = search;
 
       const res = await axios.get("/api/tasks", { params });
@@ -559,7 +740,7 @@ export default function HRTasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, viewMode]);
 
   useEffect(() => {
     fetchTasks();
@@ -602,13 +783,39 @@ export default function HRTasksPage() {
             Manage your work across the workflow
           </p>
         </div>
-        <Button
-          className="bg-[#00968a] hover:bg-[#007a70] text-white"
-          onClick={() => setShowNewForm(true)}
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+            <button
+              onClick={() => setViewMode("mine")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                viewMode === "mine"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              My Tasks
+            </button>
+            <button
+              onClick={() => setViewMode("department")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                viewMode === "department"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All {deptDisplayName}
+            </button>
+          </div>
+          {canCreateTasks && (
+            <Button
+              className="bg-[#00968a] hover:bg-[#007a70] text-white"
+              onClick={() => setShowNewForm(true)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              New Task
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}

@@ -2,6 +2,18 @@ import { type NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
+import type { TaskPriority, Department } from "@/generated/prisma/enums";
+
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,6 +70,11 @@ export async function GET(request: NextRequest) {
         },
         client: {
           select: { id: true, companyName: true },
+        },
+        attachments: true,
+        statusHistory: {
+          include: { changedBy: { select: { id: true, name: true } } },
+          orderBy: { changedAt: "asc" },
         },
       },
     });
@@ -126,23 +143,97 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { title, description, priority, deadline, department, clientId, assignedToId } = body;
+    // Only ADMIN, PARTNER, MANAGER can create tasks
+    if (!["ADMIN", "PARTNER", "MANAGER"].includes(session.user.role)) {
+      return Response.json({ error: "Only managers can create tasks" }, { status: 403 });
+    }
+
+    const formData = await request.formData();
+
+    const title = formData.get("title") as string | null;
+    const description = formData.get("description") as string | null;
+    const priority = formData.get("priority") as string | null;
+    const deadline = formData.get("deadline") as string | null;
+    const department = formData.get("department") as string | null;
+    const assignedToIdRaw = formData.get("assignedToId") as string | null;
+    const clientId = formData.get("clientId") as string | null;
 
     if (!title || !title.trim()) {
       return Response.json({ error: "Title is required" }, { status: 400 });
+    }
+
+    // If assignedToId is empty string or "unassigned", treat as null (unassigned)
+    const assignedToId =
+      !assignedToIdRaw || assignedToIdRaw === "" || assignedToIdRaw === "unassigned"
+        ? null
+        : assignedToIdRaw;
+
+    const files = formData.getAll("attachments") as File[];
+
+    // Validate mime types
+    for (const file of files) {
+      if (!ALLOWED_MIME_TYPES.has(file.type)) {
+        return Response.json(
+          {
+            error: `File type not allowed: ${file.type}. Allowed types: PDF, Word, Excel.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Save files to disk
+    const savedFiles: {
+      originalName: string;
+      uniqueName: string;
+      size: number;
+      mimeType: string;
+    }[] = [];
+
+    for (const file of files) {
+      const ext = path.extname(file.name);
+      const uniqueName = `${crypto.randomUUID()}${ext}`;
+      const fullPath = path.join(
+        process.cwd(),
+        "public",
+        "documents",
+        uniqueName
+      );
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(fullPath, buffer);
+      savedFiles.push({
+        originalName: file.name,
+        uniqueName,
+        size: buffer.length,
+        mimeType: file.type,
+      });
     }
 
     const task = await prisma.task.create({
       data: {
         title: title.trim(),
         description: description || null,
-        priority: priority || "MEDIUM",
+        priority: (priority || "MEDIUM") as TaskPriority,
         deadline: deadline ? new Date(deadline) : null,
-        department: department || session.user.department || null,
+        department: (department || session.user.department || null) as Department | null,
         clientId: clientId || null,
-        assignedToId: assignedToId || session.user.id,
+        assignedToId: assignedToId,
         createdById: session.user.id,
+        attachments: {
+          create: savedFiles.map((f) => ({
+            fileName: f.originalName,
+            filePath: `/documents/${f.uniqueName}`,
+            fileSize: f.size,
+            mimeType: f.mimeType,
+          })),
+        },
+        statusHistory: {
+          create: {
+            fromStatus: null,
+            toStatus: "TODO",
+            changedById: session.user.id,
+          },
+        },
       },
       include: {
         assignedTo: {
@@ -153,6 +244,11 @@ export async function POST(request: NextRequest) {
         },
         client: {
           select: { id: true, companyName: true },
+        },
+        attachments: true,
+        statusHistory: {
+          include: { changedBy: { select: { id: true, name: true } } },
+          orderBy: { changedAt: "asc" },
         },
       },
     });
