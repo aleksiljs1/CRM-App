@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -316,14 +317,21 @@ function TaskDetailModal({
 
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
   const isManagerPlusRole = ["ADMIN", "PARTNER", "MANAGER"].includes(userRole);
+  const isReviewer = ["SENIOR", "ASSOCIATE"].includes(userRole);
+  const isAssignedReviewer = task.status === "REVIEW" && isReviewer && task.assignedTo?.role !== "JUNIOR";
   const rawNextStatus = NEXT_STATUS[task.status];
-  // Workers (SENIOR and below) can only: TODO->IN_PROGRESS, IN_PROGRESS->REVIEW
+  // Workers can: TODO->IN_PROGRESS, IN_PROGRESS->REVIEW
+  // Assigned reviewers (SENIOR/ASSOCIATE) can also: REVIEW->APPROVED
+  // Managers can do everything
   const nextStatus = rawNextStatus
     ? (isManagerPlusRole || rawNextStatus === "IN_PROGRESS" || rawNextStatus === "REVIEW"
+        || (rawNextStatus === "APPROVED" && isAssignedReviewer)
         ? rawNextStatus
         : null)
     : null;
-  const canSendBack = task.status === "REVIEW" && isManagerPlusRole;
+  // Only managers can complete (APPROVED → COMPLETED)
+  const finalNextStatus = (nextStatus === "COMPLETED" && !isManagerPlusRole) ? null : nextStatus;
+  const canSendBack = task.status === "REVIEW" && (isManagerPlusRole || isAssignedReviewer);
   const canReset = task.status !== "TODO" && isManagerPlusRole;
   const canAssignReviewer = task.status === "REVIEW" && isManagerPlusRole;
 
@@ -348,19 +356,19 @@ function TaskDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <h2 className="text-lg font-bold pr-4">{task.title}</h2>
-            <button
-              onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        {/* Sticky header */}
+        <div className="flex items-start justify-between p-6 pb-0 shrink-0">
+          <h2 className="text-lg font-bold pr-4">{task.title}</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
+        <div className="overflow-y-auto p-6 pt-4">
           {/* Workflow bar */}
           <div className="mb-4 overflow-x-auto">
             <WorkflowBar currentStatus={task.status} />
@@ -501,13 +509,13 @@ function TaskDetailModal({
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
-            {nextStatus && (
+            {finalNextStatus && (
               <Button
                 className="bg-[#00968a] hover:bg-[#007a70] text-white"
-                onClick={() => onStatusChange(task.id, nextStatus)}
+                onClick={() => onStatusChange(task.id, finalNextStatus)}
               >
                 <ArrowRight className="w-4 h-4 mr-1" />
-                Move to {STATUS_CONFIG[nextStatus]?.label}
+                Move to {STATUS_CONFIG[finalNextStatus]?.label}
               </Button>
             )}
             {canSendBack && (
@@ -610,18 +618,18 @@ function NewTaskForm({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">New Task</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 pb-0 shrink-0">
+          <h2 className="text-lg font-bold">New Task</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-6 pt-4">
 
           <div className="space-y-4">
             <div>
@@ -826,17 +834,48 @@ export default function HRTasksPage() {
     fetchTasks();
   }, [fetchTasks]);
 
+  // Auto-assign check every 60 seconds (for managers)
+  useEffect(() => {
+    if (!isManagerPlus) return;
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await axios.post("/api/tasks/auto-assign");
+        if (data.assigned > 0) {
+          toast.success(`${data.assigned} task(s) auto-assigned to reviewers`);
+          fetchTasks();
+        }
+      } catch {
+        // silent
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [isManagerPlus, fetchTasks]);
+
   async function handleStatusChange(taskId: string, newStatus: string) {
     try {
       await axios.patch(`/api/tasks/${taskId}`, { status: newStatus });
       await fetchTasks();
-      // Update the selected task if it's still open
-      if (selectedTask?.id === taskId) {
+
+      // Show success messages based on status change
+      const messages: Record<string, string> = {
+        IN_PROGRESS: "Task started. Good luck!",
+        REVIEW: "Task sent for review successfully.",
+        APPROVED: "Task approved.",
+        COMPLETED: "Task completed. Well done!",
+        TODO: "Task reset to To Do.",
+      };
+      toast.success(messages[newStatus] || "Task updated.");
+
+      // Close modal if sent to review (task gets unassigned, leaves "My Tasks")
+      if (newStatus === "REVIEW") {
+        setSelectedTask(null);
+      } else if (selectedTask?.id === taskId) {
         const res = await axios.get(`/api/tasks/${taskId}`);
         setSelectedTask(res.data.task);
       }
-    } catch (err) {
-      console.error("Failed to update task:", err);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Failed to update task";
+      toast.error(msg);
     }
   }
 
