@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Users,
   CheckCircle2,
@@ -14,6 +15,9 @@ import {
   Loader2,
   ClipboardList,
   ExternalLink,
+  Plus,
+  X,
+  UserPlus,
 } from "lucide-react";
 
 interface TeamMember {
@@ -22,6 +26,7 @@ interface TeamMember {
     name: string;
     email: string;
     role: string;
+    subRole?: string | null;
     department: string | null;
     avatar: string | null;
     createdAt: string;
@@ -81,25 +86,212 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
+// ─── Add Employee Modal ─────────────────────────────────────────────────────
+
+function AddEmployeeModal({
+  department,
+  onClose,
+  onCreated,
+}: {
+  department: string | null;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("ASSOCIATE");
+  const [subRole, setSubRole] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !password.trim()) return;
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role,
+          subRole: subRole.trim() || null,
+          department,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setFormError(data.error || "Failed to create employee");
+        return;
+      }
+      onCreated();
+      onClose();
+    } catch {
+      setFormError("Failed to create employee");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold">Add Employee</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {formError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Name *
+              </label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full name"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Email *
+              </label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="employee@kreston.al"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Password *
+              </label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Set a password"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Role
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent"
+              >
+                <option value="SENIOR">Senior</option>
+                <option value="ASSOCIATE">Associate</option>
+                <option value="JUNIOR">Junior</option>
+                <option value="ASSISTANT">Assistant</option>
+                <option value="INTERN">Intern</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Sub-role (optional)
+              </label>
+              <Input
+                value={subRole}
+                onChange={(e) => setSubRole(e.target.value)}
+                placeholder="e.g. Senior Associate, Junior Auditor"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Display title that replaces the role label
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Department
+              </label>
+              <Badge className="bg-[#00968a]/10 text-[#00968a] border-[#00968a]/20 hover:bg-[#00968a]/10">
+                {getDeptName(department)}
+              </Badge>
+              <p className="text-xs text-gray-400 mt-1">
+                Auto-set to your department
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || !name.trim() || !email.trim() || !password.trim()}
+              className="bg-[#00968a] hover:bg-[#007a70] text-white"
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <UserPlus className="w-4 h-4 mr-1" />
+              )}
+              Create Employee
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
+
 export default function TeamPage() {
   const { data: session } = useSession();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [toast, setToast] = useState("");
+
+  const isManagerPlus = ["ADMIN", "PARTNER", "MANAGER"].includes(
+    session?.user?.role || ""
+  );
+
+  async function fetchTeam() {
+    try {
+      const res = await fetch("/api/team");
+      if (!res.ok) throw new Error("Failed to fetch team");
+      const data = await res.json();
+      setTeam(data.team);
+    } catch {
+      setError("Failed to load team data");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchTeam() {
-      try {
-        const res = await fetch("/api/team");
-        if (!res.ok) throw new Error("Failed to fetch team");
-        const data = await res.json();
-        setTeam(data.team);
-      } catch {
-        setError("Failed to load team data");
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchTeam();
   }, []);
 
@@ -137,11 +329,22 @@ export default function TeamPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Team</h1>
-        <p className="text-sm text-gray-500">
-          {getDeptName(session?.user?.department ?? null)}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Team</h1>
+          <p className="text-sm text-gray-500">
+            {getDeptName(session?.user?.department ?? null)}
+          </p>
+        </div>
+        {isManagerPlus && (
+          <Button
+            className="bg-[#00968a] hover:bg-[#007a70] text-white"
+            onClick={() => setShowAddEmployee(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-1" />
+            Add Employee
+          </Button>
+        )}
       </div>
 
       {/* Overview Cards */}
@@ -217,7 +420,7 @@ export default function TeamPage() {
                     variant="outline"
                     className={`mt-1 text-[10px] px-1.5 py-0 font-medium ${roleBadgeColors[user.role] || ""}`}
                   >
-                    {user.role}
+                    {user.subRole || user.role}
                   </Badge>
                 </div>
               </div>
@@ -294,6 +497,27 @@ export default function TeamPage() {
           <p className="text-sm">
             There are no employees in your department yet.
           </p>
+        </div>
+      )}
+
+      {/* Add Employee Modal */}
+      {showAddEmployee && (
+        <AddEmployeeModal
+          department={session?.user?.department ?? null}
+          onClose={() => setShowAddEmployee(false)}
+          onCreated={() => {
+            fetchTeam();
+            setToast("Employee created");
+            setTimeout(() => setToast(""), 3000);
+          }}
+        />
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#00968a] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4" />
+          <span className="text-sm font-medium">{toast}</span>
         </div>
       )}
     </div>

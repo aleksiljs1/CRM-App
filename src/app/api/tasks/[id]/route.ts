@@ -170,6 +170,29 @@ export async function PATCH(
         data.completedAt = null;
       }
 
+      // ── Review workflow: unassign when moving to REVIEW ──
+      if (status === "REVIEW") {
+        // Task goes back to the department pool; manager must assign a reviewer
+        data.assignedToId = null;
+      }
+
+      // ── Send-back workflow: REVIEW → IN_PROGRESS reassigns to original worker ──
+      if (task.status === "REVIEW" && status === "IN_PROGRESS") {
+        // Find the last status history entry where someone moved the task to REVIEW.
+        // The changedById on that entry is the original worker who submitted it.
+        const lastReviewEntry = await prisma.taskStatusHistory.findFirst({
+          where: {
+            taskId: id,
+            toStatus: "REVIEW",
+          },
+          orderBy: { changedAt: "desc" },
+        });
+
+        if (lastReviewEntry) {
+          data.assignedToId = lastReviewEntry.changedById;
+        }
+      }
+
       // Create status history record alongside the update
       data.statusHistory = {
         create: {
@@ -180,8 +203,52 @@ export async function PATCH(
       };
     }
 
-    if (assignedToId !== undefined) {
-      data.assignedToId = assignedToId;
+    // ── Reviewer assignment: allow MANAGER+ to assign a reviewer to a REVIEW task ──
+    if (assignedToId !== undefined && !status) {
+      // If task is in REVIEW, only MANAGER+ can assign, and only to SENIOR/ASSOCIATE/MANAGER
+      if (task.status === "REVIEW") {
+        const managerRoles = ["MANAGER", "PARTNER", "ADMIN"];
+        if (!managerRoles.includes(userRole)) {
+          return Response.json(
+            { error: "Only MANAGER or above can assign a reviewer" },
+            { status: 403 }
+          );
+        }
+
+        if (assignedToId !== null) {
+          // Validate the reviewer's role
+          const reviewer = await prisma.user.findUnique({
+            where: { id: assignedToId },
+            select: { role: true },
+          });
+
+          if (!reviewer) {
+            return Response.json(
+              { error: "Reviewer user not found" },
+              { status: 404 }
+            );
+          }
+
+          const allowedReviewerRoles = ["SENIOR", "ASSOCIATE", "MANAGER", "PARTNER", "ADMIN"];
+          if (!allowedReviewerRoles.includes(reviewer.role)) {
+            return Response.json(
+              { error: `Cannot assign ${reviewer.role} as a reviewer. Only SENIOR, ASSOCIATE, or MANAGER+ can review tasks.` },
+              { status: 400 }
+            );
+          }
+        }
+
+        data.assignedToId = assignedToId;
+      } else {
+        // Normal assignment for non-REVIEW tasks
+        data.assignedToId = assignedToId;
+      }
+    } else if (assignedToId !== undefined && status) {
+      // If both status and assignedToId are provided, only apply assignedToId
+      // if the status logic above didn't already set it
+      if (data.assignedToId === undefined) {
+        data.assignedToId = assignedToId;
+      }
     }
 
     const updated = await prisma.task.update({

@@ -46,6 +46,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          subRole: user.subRole,
           department: user.department,
         };
       },
@@ -55,8 +56,9 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as Record<string, unknown>).role as string;
-        token.department = (user as Record<string, unknown>).department as
+        token.role = (user as unknown as Record<string, unknown>).role as string;
+        token.subRole = (user as unknown as Record<string, unknown>).subRole as string | null;
+        token.department = (user as unknown as Record<string, unknown>).department as
           | string
           | null;
       }
@@ -66,6 +68,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.subRole = token.subRole as string | null;
         session.user.department = token.department as string | null;
       }
       return session;

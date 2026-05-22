@@ -81,6 +81,7 @@ interface TeamMember {
     name: string;
     email: string;
     role: string;
+    subRole?: string | null;
     department: string | null;
   };
 }
@@ -243,8 +244,12 @@ function TaskCard({
               <span>{task.attachments.length}</span>
             </div>
           )}
-          <span className="truncate">
-            {task.assignedTo ? task.assignedTo.name.split(" ")[0] : "Unassigned"}
+          <span className={`truncate ${task.status === "REVIEW" && !task.assignedTo ? "text-amber-600 font-medium" : ""}`}>
+            {task.status === "REVIEW" && !task.assignedTo
+              ? "Needs Reviewer"
+              : task.status === "REVIEW" && task.assignedTo
+                ? `Rev: ${task.assignedTo.name.split(" ")[0]}`
+                : task.assignedTo ? task.assignedTo.name.split(" ")[0] : "Unassigned"}
           </span>
         </div>
       </div>
@@ -297,13 +302,18 @@ function TaskDetailModal({
   task,
   onClose,
   onStatusChange,
+  onAssignReviewer,
   userRole,
 }: {
   task: Task;
   onClose: () => void;
   onStatusChange: (taskId: string, newStatus: string) => void;
+  onAssignReviewer: (taskId: string, reviewerId: string) => void;
   userRole: string;
 }) {
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [reviewerLoading, setReviewerLoading] = useState(false);
+
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
   const isManagerPlusRole = ["ADMIN", "PARTNER", "MANAGER"].includes(userRole);
   const rawNextStatus = NEXT_STATUS[task.status];
@@ -315,6 +325,26 @@ function TaskDetailModal({
     : null;
   const canSendBack = task.status === "REVIEW" && isManagerPlusRole;
   const canReset = task.status !== "TODO" && isManagerPlusRole;
+  const canAssignReviewer = task.status === "REVIEW" && isManagerPlusRole;
+
+  useEffect(() => {
+    if (canAssignReviewer) {
+      async function fetchTeam() {
+        try {
+          const res = await axios.get("/api/team");
+          const allMembers: TeamMember[] = res.data.team || [];
+          // Filter to only SENIOR, ASSOCIATE, MANAGER roles (valid reviewers)
+          const reviewers = allMembers.filter((m) =>
+            ["SENIOR", "ASSOCIATE", "MANAGER"].includes(m.user.role)
+          );
+          setTeamMembers(reviewers);
+        } catch {
+          setTeamMembers([]);
+        }
+      }
+      fetchTeam();
+    }
+  }, [canAssignReviewer]);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -375,7 +405,13 @@ function TaskDetailModal({
             </div>
             <div>
               <span className="text-gray-500">Assigned to</span>
-              <p className="mt-0.5">{task.assignedTo?.name || "Unassigned"}</p>
+              <p className="mt-0.5">
+                {task.status === "REVIEW" && !task.assignedTo
+                  ? <span className="text-amber-600 font-medium">Needs Reviewer</span>
+                  : task.status === "REVIEW" && task.assignedTo
+                    ? <span className="text-teal-700 font-medium">Reviewing: {task.assignedTo.name}</span>
+                    : task.assignedTo?.name || "Unassigned"}
+              </p>
             </div>
             <div>
               <span className="text-gray-500">Created by</span>
@@ -426,6 +462,38 @@ function TaskDetailModal({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Reviewer Assignment */}
+          {canAssignReviewer && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <label className="text-sm font-medium text-amber-800 mb-2 block">
+                Assign Reviewer
+              </label>
+              <select
+                value={task.assignedToId || ""}
+                onChange={async (e) => {
+                  const reviewerId = e.target.value;
+                  if (reviewerId) {
+                    setReviewerLoading(true);
+                    onAssignReviewer(task.id, reviewerId);
+                    setReviewerLoading(false);
+                  }
+                }}
+                disabled={reviewerLoading}
+                className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent bg-white"
+              >
+                <option value="">Select a reviewer...</option>
+                {teamMembers.map((tm) => (
+                  <option key={tm.user.id} value={tm.user.id}>
+                    {tm.user.role} - {tm.user.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-amber-600 mt-1">
+                Only Senior, Associate, or Manager can review tasks
+              </p>
             </div>
           )}
 
@@ -622,7 +690,7 @@ function NewTaskForm({
                 <option value="">Unassigned (anyone can pick up)</option>
                 {teamMembers.map((tm) => (
                   <option key={tm.user.id} value={tm.user.id}>
-                    {tm.user.name} - {tm.user.role}
+                    {tm.user.subRole || tm.user.role} - {tm.user.name}
                   </option>
                 ))}
               </select>
@@ -772,6 +840,19 @@ export default function HRTasksPage() {
     }
   }
 
+  async function handleAssignReviewer(taskId: string, reviewerId: string) {
+    try {
+      await axios.patch(`/api/tasks/${taskId}`, { assignedToId: reviewerId });
+      await fetchTasks();
+      if (selectedTask?.id === taskId) {
+        const res = await axios.get(`/api/tasks/${taskId}`);
+        setSelectedTask(res.data.task);
+      }
+    } catch (err) {
+      console.error("Failed to assign reviewer:", err);
+    }
+  }
+
   function tasksByStatus(status: string) {
     return tasks.filter((t) => t.status === status);
   }
@@ -918,6 +999,7 @@ export default function HRTasksPage() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleStatusChange}
+          onAssignReviewer={handleAssignReviewer}
           userRole={role}
         />
       )}

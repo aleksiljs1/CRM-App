@@ -36,6 +36,7 @@ async function main() {
       name: "HR Associate",
       password: "hr123",
       role: "ASSOCIATE" as const,
+      subRole: "Senior Associate",
       department: "HR" as const,
     },
     {
@@ -57,6 +58,7 @@ async function main() {
       name: "Audit Senior",
       password: "audit123",
       role: "SENIOR" as const,
+      subRole: "Senior Auditor",
       department: "AUDIT" as const,
     },
     {
@@ -71,6 +73,7 @@ async function main() {
       name: "Legal Associate",
       password: "legal123",
       role: "ASSOCIATE" as const,
+      subRole: "Junior Associate",
       department: "LEGAL" as const,
     },
     {
@@ -85,6 +88,7 @@ async function main() {
       name: "Tax Junior",
       password: "tax123",
       role: "JUNIOR" as const,
+      subRole: "Junior Accountant",
       department: "ACCOUNTING_TAX" as const,
     },
     {
@@ -108,12 +112,13 @@ async function main() {
 
     await prisma.user.upsert({
       where: { email: userData.email },
-      update: {},
+      update: { subRole: (userData as any).subRole ?? null },
       create: {
         email: userData.email,
         name: userData.name,
         password: hashedPassword,
         role: userData.role,
+        subRole: (userData as any).subRole ?? null,
         department: userData.department,
       },
     });

@@ -76,6 +76,7 @@ model User {
   name       String
   password   String
   role       Role
+  subRole    String?
   department Department?
   avatar     String?
   isActive   Boolean    @default(true)

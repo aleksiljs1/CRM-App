@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
       orderBy: [{ priority: "desc" }, { deadline: "asc" }],
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -237,10 +237,10 @@ export async function POST(request: NextRequest) {
       },
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true },
         },
         client: {
           select: { id: true, companyName: true },

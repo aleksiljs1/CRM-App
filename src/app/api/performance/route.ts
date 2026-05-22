@@ -8,6 +8,7 @@ export interface PerformanceData {
     name: string;
     email: string;
     role: string;
+    subRole?: string | null;
     department: string | null;
   };
   performanceScore: number;
@@ -29,7 +30,7 @@ export async function getPerformanceData(): Promise<PerformanceData[]> {
       isActive: true,
       role: { not: "CLIENT" },
     },
-    select: { id: true, name: true, email: true, role: true, department: true },
+    select: { id: true, name: true, email: true, role: true, subRole: true, department: true },
   });
 
   const results: PerformanceData[] = [];
