@@ -147,12 +147,14 @@ export default async function HRDashboardPage() {
 
       {/* Quick Actions */}
       <div className="flex gap-3">
-        <Button asChild style={{ backgroundColor: "#00968a" }}>
-          <Link href="/dashboard/hr/emails">View All Emails</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/hr/tasks">View Tasks</Link>
-        </Button>
+        <Link href="/dashboard/hr/emails">
+          <Button style={{ backgroundColor: "#00968a", color: "white" }}>
+            View All Emails
+          </Button>
+        </Link>
+        <Link href="/dashboard/hr/tasks">
+          <Button variant="outline">View Tasks</Button>
+        </Link>
       </div>
     </div>
   );

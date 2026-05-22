@@ -25,12 +25,6 @@ interface ClientPipelineData {
   color: string;
 }
 
-const PIPELINE_COLORS: Record<string, string> = {
-  LEAD: "#f59e0b",
-  ACTIVE: "#00968a",
-  INACTIVE: "#94a3b8",
-};
-
 export function TasksByDepartmentChart({
   data,
 }: {

@@ -10,8 +10,10 @@ import {
   FileText,
   Users,
   BarChart3,
+  TrendingUp,
   Settings,
   LogOut,
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,15 +46,33 @@ const navItems: NavItem[] = [
     icon: FileText,
   },
   {
+    label: "My Performance",
+    href: "/dashboard/hr/performance",
+    icon: Award,
+    roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN", "MANAGER"],
+  },
+  {
     label: "Clients",
     href: "/dashboard/clients",
     icon: Users,
     roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE"],
   },
   {
+    label: "Client Pipeline",
+    href: "/dashboard/manager/clients",
+    icon: Users,
+    roles: ["ADMIN", "PARTNER", "MANAGER"],
+  },
+  {
     label: "Reports",
     href: "/dashboard/reports",
     icon: BarChart3,
+    roles: ["ADMIN", "PARTNER", "MANAGER"],
+  },
+  {
+    label: "Performance",
+    href: "/dashboard/manager/performance",
+    icon: TrendingUp,
     roles: ["ADMIN", "PARTNER", "MANAGER"],
   },
   {
