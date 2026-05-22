@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,20 @@ type Filter = "all" | "unread" | "read" | "unreplied" | "replied";
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
 
 function getFileIcon(mimeType: string) {
   if (mimeType === "application/pdf")
@@ -138,6 +153,10 @@ function ThreadSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function HREmailsPage() {
+  const { data: session } = useSession();
+  const dept = session?.user?.department || null;
+  const deptDisplayName = getDeptName(dept);
+
   const [emails, setEmails] = useState<Email[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -313,7 +332,7 @@ export default function HREmailsPage() {
             <Mail className="h-5 w-5 text-[#00968a]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">HR Emails</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{deptDisplayName} Emails</h1>
             <p className="text-sm text-muted-foreground">
               {pagination.total} email{pagination.total !== 1 ? "s" : ""}
               {filter !== "all" ? ` (${filter})` : ""}

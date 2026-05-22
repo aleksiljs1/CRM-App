@@ -1,9 +1,26 @@
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Users, CheckSquare, FileText } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -17,30 +34,44 @@ function timeAgo(date: Date): string {
 }
 
 export default async function HRDashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
+
+  const department = session.user.department;
+  const role = session.user.role;
+  const isAdmin = role === "ADMIN" || role === "PARTNER";
+
+  // Build department filter for queries
+  const deptFilter = isAdmin ? {} : { recipientDept: department || "HR" };
+  const taskDeptFilter = isAdmin ? {} : { department: department || "HR" };
+
   const [unreadEmailCount, totalClients, pendingTasks, openProcesses, recentEmails] =
     await Promise.all([
       prisma.email.count({
         where: {
-          recipientDept: "HR",
+          ...deptFilter,
           isIncoming: true,
           isReplied: false,
         },
       }),
-      prisma.client.count(),
+      prisma.client.count({
+        where: isAdmin ? {} : { assignedTo: { department: department || "HR" } },
+      }),
       prisma.task.count({
         where: {
-          department: "HR",
+          ...taskDeptFilter,
           status: { not: "COMPLETED" },
         },
       }),
       prisma.clientSubmission.count({
         where: {
           status: { in: ["INCOMPLETE", "UNDER_REVIEW"] },
+          ...(isAdmin ? {} : { processType: { department: department || "HR" } }),
         },
       }),
       prisma.email.findMany({
         where: {
-          recipientDept: "HR",
+          ...deptFilter,
           isIncoming: true,
           isReplied: false,
         },
@@ -48,6 +79,8 @@ export default async function HRDashboardPage() {
         take: 5,
       }),
     ]);
+
+  const deptDisplayName = getDeptName(department);
 
   const stats = [
     {
@@ -78,7 +111,7 @@ export default async function HRDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">HR Dashboard</h1>
+      <h1 className="text-3xl font-bold">{deptDisplayName} Dashboard</h1>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

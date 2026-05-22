@@ -10,12 +10,23 @@ export async function POST() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const department = session.user.department;
+    const role = session.user.role;
+    const isAdmin = role === "ADMIN" || role === "PARTNER";
+
+    const emailWhere: any = {
+      isIncoming: true,
+      isReplied: false,
+    };
+
+    if (!isAdmin && department) {
+      emailWhere.recipientDept = department;
+    } else if (!isAdmin) {
+      emailWhere.recipientDept = "HR";
+    }
+
     const emails = await prisma.email.findMany({
-      where: {
-        isIncoming: true,
-        isReplied: false,
-        recipientDept: "HR",
-      },
+      where: emailWhere,
       include: { client: true },
     });
 
@@ -23,7 +34,8 @@ export async function POST() {
       return Response.json([]);
     }
 
-    const prompt = `You are an email priority assistant for an HR department at a professional services firm.
+    const deptLabel = department || "all departments";
+    const prompt = `You are an email priority assistant for the ${deptLabel} department at a professional services firm.
 Rank these unread emails by urgency from 1 (least urgent) to 100 (most urgent).
 
 Consider:

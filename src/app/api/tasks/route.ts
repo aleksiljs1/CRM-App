@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const department = session.user.department;
+    const role = session.user.role;
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status");
     const mine = searchParams.get("mine") !== "false"; // default true
@@ -28,6 +30,14 @@ export async function GET(request: NextRequest) {
 
     if (mine) {
       where.assignedToId = session.user.id;
+    } else {
+      // When not filtering by "mine", filter by department
+      // ADMIN and PARTNER (department=null) see ALL tasks across departments
+      if (department && role !== "ADMIN" && role !== "PARTNER") {
+        where.department = department;
+      } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
+        where.department = "HR"; // fallback
+      }
     }
 
     if (search.trim()) {
@@ -68,10 +78,16 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
-    // Count tasks per status (for the current user filter)
+    // Count tasks per status (matching the same filters)
     const baseWhere: Record<string, unknown> = {};
     if (mine) {
       baseWhere.assignedToId = session.user.id;
+    } else {
+      if (department && role !== "ADMIN" && role !== "PARTNER") {
+        baseWhere.department = department;
+      } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
+        baseWhere.department = "HR";
+      }
     }
 
     const allTasks = await prisma.task.findMany({
@@ -123,7 +139,7 @@ export async function POST(request: NextRequest) {
         description: description || null,
         priority: priority || "MEDIUM",
         deadline: deadline ? new Date(deadline) : null,
-        department: department || null,
+        department: department || session.user.department || null,
         clientId: clientId || null,
         assignedToId: assignedToId || session.user.id,
         createdById: session.user.id,

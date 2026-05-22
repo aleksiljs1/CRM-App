@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { detectDepartment } from "@/lib/email-poller";
 import crypto from "crypto";
 
 /**
@@ -59,13 +60,23 @@ export async function POST(request: Request) {
 
       if (!senderName) senderName = senderEmail.split("@")[0];
 
-      // Determine department from "to" address
+      // Determine department from "to" address first
       const to = (formData.get("to") as string) || "";
-      if (to.toLowerCase().includes("legal")) department = "LEGAL";
-      else if (to.toLowerCase().includes("audit")) department = "AUDIT";
-      else if (to.toLowerCase().includes("tax") || to.toLowerCase().includes("accounting"))
+      const toLower = to.toLowerCase();
+      if (toLower.includes("legal")) department = "LEGAL";
+      else if (toLower.includes("audit")) department = "AUDIT";
+      else if (toLower.includes("tax") || toLower.includes("accounting"))
         department = "ACCOUNTING_TAX";
-      else department = "HR";
+      else if (toLower.includes("payroll") || toLower.includes("bookkeeping"))
+        department = "BOOKKEEPING_PAYROLL";
+      else if (toLower.includes("advisory")) department = "ADVISORY";
+      else if (toLower.includes("marketing")) department = "MARKETING";
+      else if (toLower.includes("finance")) department = "FINANCE";
+      else if (toLower.includes("hr")) department = "HR";
+      else {
+        // Fallback: detect department from email content
+        department = detectDepartment(subject, body);
+      }
     } else {
       // ------- Simple JSON (for testing) -------
       const json = await request.json();
@@ -73,7 +84,12 @@ export async function POST(request: Request) {
       senderName = json.fromName || json.senderName || senderEmail.split("@")[0];
       subject = json.subject || "(No Subject)";
       body = json.body || json.text || "";
-      department = (json.department || "HR").toUpperCase();
+      // Use explicit department if provided, otherwise detect from content
+      if (json.department) {
+        department = json.department.toUpperCase();
+      } else {
+        department = detectDepartment(subject, body);
+      }
     }
 
     // Clean up body - strip excessive whitespace/HTML

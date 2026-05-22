@@ -10,7 +10,8 @@ export async function GET(request: NextRequest) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const department = session.user.department || "HR";
+    const department = session.user.department;
+    const role = session.user.role;
     const searchParams = request.nextUrl.searchParams;
 
     // Filter: all | unread | read | replied
@@ -22,9 +23,15 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      recipientDept: department,
-    };
+    const where: any = {};
+
+    // ADMIN and PARTNER (department=null) see ALL emails; others see only their department
+    if (department && role !== "ADMIN" && role !== "PARTNER") {
+      where.recipientDept = department;
+    } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
+      // Fallback for non-admin users without a department
+      where.recipientDept = "HR";
+    }
 
     if (filter === "unread") {
       where.isIncoming = true;

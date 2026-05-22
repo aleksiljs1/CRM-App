@@ -23,6 +23,21 @@ const IMAP_CONFIG = {
   },
 };
 
+/**
+ * Detect department from email subject and body using keyword matching.
+ */
+function detectDepartment(subject: string, body: string): string {
+  const text = (subject + " " + body).toLowerCase();
+  if (text.includes("audit") || text.includes("assurance")) return "AUDIT";
+  if (text.includes("tax") || text.includes("accounting") || text.includes("vat")) return "ACCOUNTING_TAX";
+  if (text.includes("payroll") || text.includes("salary") || text.includes("bookkeeping")) return "BOOKKEEPING_PAYROLL";
+  if (text.includes("legal") || text.includes("law") || text.includes("compliance") || text.includes("contract")) return "LEGAL";
+  if (text.includes("advisory") || text.includes("consulting")) return "ADVISORY";
+  if (text.includes("marketing") || text.includes("campaign") || text.includes("brand")) return "MARKETING";
+  if (text.includes("budget") || text.includes("expense") || text.includes("finance") || text.includes("invoice")) return "FINANCE";
+  return "HR"; // default fallback
+}
+
 async function fetchNewEmails() {
   if (isPolling) return; // prevent overlapping polls
   isPolling = true;
@@ -67,13 +82,16 @@ async function fetchNewEmails() {
         body = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
         if (body.length > 5000) body = body.slice(0, 5000);
 
+        // Detect department from content
+        const recipientDept = detectDepartment(subject, body);
+
         newEmails.push({
           threadId: `thread-${crypto.randomUUID().slice(0, 8)}`,
           senderEmail,
           senderName,
           subject,
           body,
-          recipientDept: "HR", // default to HR, can be smarter later
+          recipientDept,
         });
       } catch (parseErr) {
         console.error("[IMAP] Failed to parse email:", parseErr);
@@ -90,7 +108,7 @@ async function fetchNewEmails() {
   }
 }
 
-export { fetchNewEmails };
+export { fetchNewEmails, detectDepartment };
 
 export function startPolling() {
   if (pollInterval) return; // already running

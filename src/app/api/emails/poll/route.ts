@@ -57,15 +57,15 @@ export async function POST() {
 
       saved.push(email);
 
-      // Notify HR users
-      const hrUsers = await prisma.user.findMany({
-        where: { department: "HR", isActive: true },
+      // Notify users in the MATCHING department (not just HR)
+      const deptUsers = await prisma.user.findMany({
+        where: { department: emailData.recipientDept as any, isActive: true },
         select: { id: true },
       });
 
-      if (hrUsers.length > 0) {
+      if (deptUsers.length > 0) {
         await prisma.notification.createMany({
-          data: hrUsers.map((u) => ({
+          data: deptUsers.map((u) => ({
             userId: u.id,
             title: "New Email",
             message: `From ${emailData.senderName}: ${emailData.subject}`,
@@ -76,7 +76,7 @@ export async function POST() {
       }
 
       console.log(
-        `[POLL] Saved email from ${emailData.senderEmail}: "${emailData.subject}"`
+        `[POLL] Saved email from ${emailData.senderEmail}: "${emailData.subject}" -> ${emailData.recipientDept}`
       );
     }
 

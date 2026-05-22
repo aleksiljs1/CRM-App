@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import axios from "axios";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -512,7 +513,25 @@ function NewTaskForm({
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
+
 export default function HRTasksPage() {
+  const { data: session } = useSession();
+  const dept = session?.user?.department || null;
+  const deptDisplayName = getDeptName(dept);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [counts, setCounts] = useState<Counts>({
     todo: 0,
@@ -578,7 +597,7 @@ export default function HRTasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">My Tasks</h1>
+          <h1 className="text-2xl font-bold">{deptDisplayName} Tasks</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Manage your work across the workflow
           </p>
