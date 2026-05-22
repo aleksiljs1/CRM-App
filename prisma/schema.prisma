@@ -1,0 +1,294 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  PARTNER
+  MANAGER
+  SENIOR
+  ASSOCIATE
+  JUNIOR
+  ASSISTANT
+  INTERN
+  CLIENT
+}
+
+enum Department {
+  AUDIT
+  ACCOUNTING_TAX
+  BOOKKEEPING_PAYROLL
+  LEGAL
+  ADVISORY
+  HR
+  MARKETING
+  FINANCE
+}
+
+enum ClientStatus {
+  LEAD
+  ACTIVE
+  INACTIVE
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  APPROVED
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SubmissionStatus {
+  INCOMPLETE
+  COMPLETE
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  EMAIL
+  TASK
+  DOCUMENT
+  SYSTEM
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String
+  password   String
+  role       Role
+  department Department?
+  avatar     String?
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relations
+  assignedClients  Client[]           @relation("AssignedClients")
+  emails           Email[]            @relation("UserEmails")
+  createdProcesses ProcessType[]      @relation("ProcessCreator")
+  assignedTasks    Task[]             @relation("TaskAssignee")
+  createdTasks     Task[]             @relation("TaskCreator")
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+
+  @@index([email])
+  @@index([role])
+  @@index([department])
+}
+
+model Client {
+  id           String       @id @default(cuid())
+  companyName  String
+  contactName  String
+  contactEmail String
+  phone        String?
+  industry     String?
+  status       ClientStatus @default(LEAD)
+  assignedToId String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  assignedTo  User?              @relation("AssignedClients", fields: [assignedToId], references: [id], onDelete: SetNull)
+  emails      Email[]
+  submissions ClientSubmission[]
+  tasks       Task[]
+
+  @@index([assignedToId])
+  @@index([status])
+}
+
+model Email {
+  id            String      @id @default(cuid())
+  threadId      String
+  parentId      String?
+  senderEmail   String
+  senderName    String?
+  recipientDept Department?
+  subject       String
+  body          String
+  isIncoming    Boolean     @default(true)
+  isReplied     Boolean     @default(false)
+  aiImportance  Int?
+  createdAt     DateTime    @default(now())
+  repliedAt     DateTime?
+  clientId      String?
+  userId        String?
+
+  // Relations
+  parent      Email?            @relation("EmailThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies     Email[]           @relation("EmailThread")
+  client      Client?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  user        User?             @relation("UserEmails", fields: [userId], references: [id], onDelete: SetNull)
+  attachments EmailAttachment[]
+
+  @@index([threadId])
+  @@index([clientId])
+  @@index([userId])
+  @@index([recipientDept])
+  @@index([isIncoming, isReplied])
+  @@index([aiImportance])
+}
+
+model ProcessType {
+  id          String     @id @default(cuid())
+  name        String
+  department  Department
+  description String?
+  isActive    Boolean    @default(true)
+  createdById String
+
+  // Relations
+  createdBy         User               @relation("ProcessCreator", fields: [createdById], references: [id])
+  requiredDocuments RequiredDocument[]
+  submissions       ClientSubmission[]
+
+  @@index([department])
+}
+
+model RequiredDocument {
+  id            String  @id @default(cuid())
+  processTypeId String
+  documentName  String
+  description   String?
+  isMandatory   Boolean @default(true)
+
+  // Relations
+  processType       ProcessType         @relation(fields: [processTypeId], references: [id], onDelete: Cascade)
+  matchedDocuments  SubmittedDocument[]
+
+  @@index([processTypeId])
+}
+
+model ClientSubmission {
+  id            String           @id @default(cuid())
+  clientId      String
+  processTypeId String
+  status        SubmissionStatus @default(INCOMPLETE)
+  submittedAt   DateTime         @default(now())
+  aiValidation  Json?
+
+  // Relations
+  client      Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  processType ProcessType         @relation(fields: [processTypeId], references: [id])
+  documents   SubmittedDocument[]
+
+  @@index([clientId])
+  @@index([processTypeId])
+  @@index([status])
+}
+
+model SubmittedDocument {
+  id            String  @id @default(cuid())
+  submissionId  String
+  fileName      String
+  filePath      String
+  fileSize      Int
+  aiMatchedToId String?
+  aiConfidence  Float?
+  firstPageText String?
+  uploadedAt    DateTime @default(now())
+
+  // Relations
+  submission  ClientSubmission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  aiMatchedTo RequiredDocument? @relation(fields: [aiMatchedToId], references: [id], onDelete: SetNull)
+
+  @@index([submissionId])
+  @@index([aiMatchedToId])
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus   @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  deadline     DateTime?
+  department   Department?
+  assignedToId String?
+  createdById  String
+  clientId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  completedAt  DateTime?
+
+  // Relations
+  assignedTo User?   @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy  User    @relation("TaskCreator", fields: [createdById], references: [id])
+  client     Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([assignedToId])
+  @@index([createdById])
+  @@index([clientId])
+  @@index([status])
+  @@index([department])
+  @@index([priority])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  type      NotificationType
+  link      String?
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([type])
+}
+
+model EmailAttachment {
+  id        String   @id @default(cuid())
+  emailId   String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+}

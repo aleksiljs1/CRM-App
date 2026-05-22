@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kreston-crm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kreston_crm
+      POSTGRES_USER: kreston
+      POSTGRES_PASSWORD: kreston123
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kreston -d kreston_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  pgdata:
