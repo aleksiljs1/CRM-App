@@ -22,6 +22,16 @@ export async function GET(
       return Response.json({ error: "Email not found" }, { status: 404 });
     }
 
+    // Mark all incoming unread emails in this thread as read
+    await prisma.email.updateMany({
+      where: {
+        threadId: email.threadId,
+        isIncoming: true,
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
+
     const thread = await prisma.email.findMany({
       where: { threadId: email.threadId },
       orderBy: { createdAt: "asc" },

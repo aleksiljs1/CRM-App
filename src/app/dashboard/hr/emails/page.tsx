@@ -14,11 +14,22 @@ import {
   ArrowUpDown,
   FileText,
   Paperclip,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+interface EmailAttachment {
+  id: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+}
 
 interface Email {
   id: string;
@@ -30,26 +41,38 @@ interface Email {
   subject: string;
   body: string;
   isIncoming: boolean;
+  isRead: boolean;
   isReplied: boolean;
   aiImportance: number | null;
   createdAt: string;
   repliedAt: string | null;
   clientId: string | null;
   userId: string | null;
+  attachments?: EmailAttachment[];
   client?: { name: string } | null;
   user?: { name: string } | null;
 }
 
-type Filter = "all" | "unread" | "replied";
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+type Filter = "all" | "unread" | "read" | "unreplied" | "replied";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function getFileIcon(mimeType: string) {
-  if (mimeType === "application/pdf") return <FileText className="h-3.5 w-3.5 text-red-500" />;
-  if (mimeType.includes("word")) return <FileText className="h-3.5 w-3.5 text-blue-500" />;
-  if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return <FileText className="h-3.5 w-3.5 text-green-500" />;
+  if (mimeType === "application/pdf")
+    return <FileText className="h-3.5 w-3.5 text-red-500" />;
+  if (mimeType.includes("word"))
+    return <FileText className="h-3.5 w-3.5 text-blue-500" />;
+  if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
+    return <FileText className="h-3.5 w-3.5 text-green-500" />;
   return <FileText className="h-3.5 w-3.5 text-gray-500" />;
 }
 
@@ -78,7 +101,10 @@ function EmailListSkeleton() {
   return (
     <div className="space-y-2 p-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="animate-pulse space-y-2 rounded-lg bg-muted/60 p-4">
+        <div
+          key={i}
+          className="animate-pulse space-y-2 rounded-lg bg-muted/60 p-4"
+        >
           <div className="h-3.5 w-1/3 rounded bg-muted-foreground/20" />
           <div className="h-3 w-2/3 rounded bg-muted-foreground/15" />
           <div className="h-2.5 w-full rounded bg-muted-foreground/10" />
@@ -113,9 +139,17 @@ function ThreadSkeleton() {
 
 export default function HREmailsPage() {
   const [emails, setEmails] = useState<Email[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [thread, setThread] = useState<Email[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [replyText, setReplyText] = useState("");
   const [loadingEmails, setLoadingEmails] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -123,29 +157,62 @@ export default function HREmailsPage() {
   const [prioritizing, setPrioritizing] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Fetch email list ----
-  const fetchEmails = useCallback(async () => {
-    setLoadingEmails(true);
-    try {
-      const params: Record<string, string> = {};
-      if (filter === "unread") params.unread = "true";
-      const { data } = await axios.get<Email[]>("/api/emails", { params });
-      let filtered = data;
-      if (filter === "replied") {
-        filtered = data.filter((e) => e.isReplied);
+  const fetchEmails = useCallback(
+    async (page = 1) => {
+      setLoadingEmails(true);
+      try {
+        const params: Record<string, string> = {
+          filter,
+          page: String(page),
+          limit: "20",
+        };
+        if (search.trim()) params.search = search;
+
+        const { data } = await axios.get("/api/emails", { params });
+        setEmails(data.emails);
+        setPagination(data.pagination);
+      } catch {
+        toast.error("Failed to load emails");
+      } finally {
+        setLoadingEmails(false);
       }
-      setEmails(filtered);
-    } catch {
-      toast.error("Failed to load emails");
-    } finally {
-      setLoadingEmails(false);
-    }
-  }, [filter]);
+    },
+    [filter, search]
+  );
 
   useEffect(() => {
-    fetchEmails();
+    fetchEmails(1);
   }, [fetchEmails]);
+
+  // ---- Debounced search ----
+  const handleSearchInput = (value: string) => {
+    setSearchInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setSearch(value);
+    }, 400);
+  };
+
+  // ---- Poll Gmail for new emails every 10 seconds ----
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const { data } = await axios.post("/api/emails/poll");
+        if (data.fetched > 0) {
+          toast.success(`${data.fetched} new email(s) received`);
+          fetchEmails(pagination.page);
+        }
+      } catch {
+        // silent fail
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 10000);
+    return () => clearInterval(interval);
+  }, [fetchEmails, pagination.page]);
 
   // ---- Fetch thread when selection changes ----
   useEffect(() => {
@@ -158,7 +225,18 @@ export default function HREmailsPage() {
       setLoadingThread(true);
       try {
         const { data } = await axios.get<Email[]>(`/api/emails/${selectedId}`);
-        if (!cancelled) setThread(data);
+        if (!cancelled) {
+          setThread(data);
+          // Update the email in the list to show as read (without refetching)
+          setEmails((prev) =>
+            prev.map((e) =>
+              e.threadId ===
+              (data.length > 0 ? data[0].threadId : "")
+                ? { ...e, isRead: true }
+                : e
+            )
+          );
+        }
       } catch {
         toast.error("Failed to load email thread");
       } finally {
@@ -177,7 +255,7 @@ export default function HREmailsPage() {
     try {
       const formData = new FormData();
       formData.append("body", replyText);
-      attachments.forEach(file => formData.append("attachments", file));
+      attachments.forEach((file) => formData.append("attachments", file));
 
       await axios.post(`/api/emails/${selectedId}/reply`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -188,8 +266,7 @@ export default function HREmailsPage() {
       // Refresh thread
       const { data } = await axios.get<Email[]>(`/api/emails/${selectedId}`);
       setThread(data);
-      // Refresh list to update reply status
-      fetchEmails();
+      fetchEmails(pagination.page);
     } catch {
       toast.error("Failed to send reply");
     } finally {
@@ -203,16 +280,12 @@ export default function HREmailsPage() {
     try {
       await axios.post("/api/emails/prioritize");
       toast.success("Emails prioritized by AI");
-      const { data } = await axios.get<Email[]>("/api/emails");
-      const sorted = [...data].sort(
-        (a, b) => (b.aiImportance ?? 0) - (a.aiImportance ?? 0)
-      );
-      setEmails(
-        filter === "replied"
-          ? sorted.filter((e) => e.isReplied)
-          : filter === "unread"
-          ? sorted.filter((e) => !e.isReplied && e.isIncoming)
-          : sorted
+      await fetchEmails(1);
+      // Sort locally by importance
+      setEmails((prev) =>
+        [...prev].sort(
+          (a, b) => (b.aiImportance ?? 0) - (a.aiImportance ?? 0)
+        )
       );
     } catch {
       toast.error("AI prioritization failed");
@@ -221,12 +294,18 @@ export default function HREmailsPage() {
     }
   };
 
+  // ---- Pagination handlers ----
+  const goToPage = (page: number) => {
+    if (page < 1 || page > pagination.totalPages) return;
+    fetchEmails(page);
+  };
+
   // ---- Selected email (for detail header) ----
   const selectedEmail = emails.find((e) => e.id === selectedId) ?? null;
 
   // ---- Render ----
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* ------ Header ------ */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -236,7 +315,7 @@ export default function HREmailsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">HR Emails</h1>
             <p className="text-sm text-muted-foreground">
-              {emails.length} email{emails.length !== 1 ? "s" : ""}
+              {pagination.total} email{pagination.total !== 1 ? "s" : ""}
               {filter !== "all" ? ` (${filter})` : ""}
             </p>
           </div>
@@ -257,28 +336,42 @@ export default function HREmailsPage() {
         </Button>
       </div>
 
-      {/* ------ Filter tabs ------ */}
-      <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 w-fit">
-        {(["all", "unread", "replied"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => {
-              setFilter(f);
-              setSelectedId(null);
-            }}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${
-              filter === f
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f === "all" ? "All" : f === "unread" ? "Unread" : "Replied"}
-          </button>
-        ))}
+      {/* ------ Filter tabs + Search ------ */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+          {(["all", "unread", "read", "unreplied", "replied"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => {
+                setFilter(f);
+                setSelectedId(null);
+              }}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${
+                filter === f
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f === "unreplied" ? "Un-replied" : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => handleSearchInput(e.target.value)}
+            placeholder="Search emails..."
+            className="h-9 w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+          />
+        </div>
       </div>
 
-      {/* ------ Main split layout ------ */}
-      <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
+      {/* ------ Main split layout - INDEPENDENT scrolling ------ */}
+      <div className="flex flex-1 gap-4 min-h-0">
         {/* ====== LEFT: Email list ====== */}
         <Card className="flex w-[40%] min-w-[320px] flex-col overflow-hidden">
           {loadingEmails ? (
@@ -289,96 +382,129 @@ export default function HREmailsPage() {
                 <Inbox className="h-7 w-7 text-muted-foreground" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">
-                No emails found
+                {search ? "No emails match your search" : "No emails found"}
               </p>
             </div>
           ) : (
-            <div className="flex-1 overflow-y-auto">
-              {emails.map((email) => {
-                const isSelected = email.id === selectedId;
-                const isUnread = email.isIncoming && !email.isReplied;
-                const importance = email.aiImportance ?? 0;
+            <>
+              {/* Scrollable email list */}
+              <div className="flex-1 overflow-y-auto">
+                {emails.map((email) => {
+                  const isSelected = email.id === selectedId;
+                  const isUnread = email.isIncoming && !email.isRead;
+                  const importance = email.aiImportance ?? 0;
 
-                return (
-                  <button
-                    key={email.id}
-                    onClick={() => setSelectedId(email.id)}
-                    className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
-                      isSelected
-                        ? "bg-[#00968a]/8 border-l-2 border-l-[#00968a]"
-                        : "hover:bg-muted/50 border-l-2 border-l-transparent"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        {/* Sender + time */}
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`truncate text-sm ${
+                  return (
+                    <button
+                      key={email.id}
+                      onClick={() => setSelectedId(email.id)}
+                      className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
+                        isSelected
+                          ? "bg-[#00968a]/8 border-l-2 border-l-[#00968a]"
+                          : "hover:bg-muted/50 border-l-2 border-l-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`truncate text-sm ${
+                                isUnread
+                                  ? "font-semibold text-foreground"
+                                  : "font-medium text-foreground/80"
+                              }`}
+                            >
+                              {email.senderName}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {timeAgo(email.createdAt)}
+                            </span>
+                          </div>
+                          <p
+                            className={`mt-0.5 truncate text-sm ${
                               isUnread
-                                ? "font-semibold text-foreground"
-                                : "font-medium text-foreground/80"
+                                ? "font-medium text-foreground"
+                                : "text-foreground/70"
                             }`}
                           >
-                            {email.senderName}
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {timeAgo(email.createdAt)}
-                          </span>
+                            {email.subject}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {email.body.slice(0, 80)}
+                            {email.body.length > 80 ? "..." : ""}
+                          </p>
                         </div>
 
-                        {/* Subject */}
-                        <p
-                          className={`mt-0.5 truncate text-sm ${
-                            isUnread
-                              ? "font-medium text-foreground"
-                              : "text-foreground/70"
-                          }`}
-                        >
-                          {email.subject}
-                        </p>
-
-                        {/* Body preview */}
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {email.body.slice(0, 80)}
-                          {email.body.length > 80 ? "..." : ""}
-                        </p>
-                      </div>
-
-                      {/* Right-side indicators */}
-                      <div className="flex shrink-0 flex-col items-end gap-1.5 pt-0.5">
-                        {/* Reply status dot */}
-                        <span
-                          className={`inline-block h-2 w-2 rounded-full ${
-                            email.isReplied ? "bg-emerald-500" : "bg-red-400"
-                          }`}
-                          title={email.isReplied ? "Replied" : "Not replied"}
-                        />
-                        {/* AI importance badge */}
-                        {importance > 50 && (
+                        <div className="flex shrink-0 flex-col items-end gap-1.5 pt-0.5">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight ${
-                              importance > 70
-                                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-                                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                            className={`inline-block h-2 w-2 rounded-full ${
+                              email.isReplied
+                                ? "bg-emerald-500"
+                                : isUnread
+                                ? "bg-red-400"
+                                : "bg-gray-300"
                             }`}
-                          >
-                            {importance > 70 ? "Urgent" : "Important"}
-                          </span>
-                        )}
+                            title={
+                              email.isReplied
+                                ? "Replied"
+                                : isUnread
+                                ? "Unread"
+                                : "Read"
+                            }
+                          />
+                          {importance > 50 && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight ${
+                                importance > 70
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {importance > 70 ? "Urgent" : "Important"}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              {pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between border-t px-4 py-2.5">
+                  <span className="text-xs text-muted-foreground">
+                    Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={pagination.page <= 1}
+                      onClick={() => goToPage(pagination.page - 1)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={pagination.page >= pagination.totalPages}
+                      onClick={() => goToPage(pagination.page + 1)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card>
 
-        {/* ====== RIGHT: Email detail & thread ====== */}
+        {/* ====== RIGHT: Email detail & thread (INDEPENDENT scroll) ====== */}
         <Card className="flex flex-1 flex-col overflow-hidden">
           {!selectedId ? (
-            /* Empty state */
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <Mail className="h-8 w-8 text-muted-foreground/60" />
@@ -394,7 +520,7 @@ export default function HREmailsPage() {
             <>
               {/* Detail header */}
               {selectedEmail && (
-                <div className="border-b px-6 py-4">
+                <div className="shrink-0 border-b px-6 py-4">
                   <h2 className="text-lg font-semibold leading-tight">
                     {selectedEmail.subject}
                   </h2>
@@ -422,7 +548,7 @@ export default function HREmailsPage() {
                 </div>
               )}
 
-              {/* Thread messages */}
+              {/* Thread messages - scrollable independently */}
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 {loadingThread ? (
                   <ThreadSkeleton />
@@ -469,22 +595,37 @@ export default function HREmailsPage() {
                             >
                               {msg.body}
                             </p>
-                            {(msg as any).attachments && (msg as any).attachments.length > 0 && (
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {(msg as any).attachments.map((att: any) => (
-                                  <a
-                                    key={att.id}
-                                    href={`/api/attachments/${att.id}`}
-                                    target="_blank"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/80 border rounded-lg text-xs hover:bg-gray-50 transition-colors"
-                                  >
-                                    {getFileIcon(att.mimeType)}
-                                    <span className="max-w-[150px] truncate">{att.fileName}</span>
-                                    <span className="text-gray-400">({formatFileSize(att.fileSize)})</span>
-                                  </a>
-                                ))}
-                              </div>
-                            )}
+                            {msg.attachments &&
+                              msg.attachments.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {msg.attachments.map((att) => (
+                                    <a
+                                      key={att.id}
+                                      href={`/api/attachments/${att.id}`}
+                                      target="_blank"
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${
+                                        isOutgoing
+                                          ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
+                                          : "bg-white/80 border-gray-200 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      {getFileIcon(att.mimeType)}
+                                      <span className="max-w-[150px] truncate">
+                                        {att.fileName}
+                                      </span>
+                                      <span
+                                        className={
+                                          isOutgoing
+                                            ? "text-white/50"
+                                            : "text-gray-400"
+                                        }
+                                      >
+                                        ({formatFileSize(att.fileSize)})
+                                      </span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                           </div>
                         </div>
                       );
@@ -493,8 +634,8 @@ export default function HREmailsPage() {
                 )}
               </div>
 
-              {/* Reply box */}
-              <div className="border-t bg-muted/20 px-6 py-4">
+              {/* Reply box - fixed at bottom */}
+              <div className="shrink-0 border-t bg-muted/20 px-6 py-4">
                 <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -510,11 +651,20 @@ export default function HREmailsPage() {
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {attachments.map((file, i) => (
-                      <div key={i} className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs">
+                      <div
+                        key={i}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs"
+                      >
                         <Paperclip className="h-3 w-3" />
-                        <span className="max-w-[120px] truncate">{file.name}</span>
+                        <span className="max-w-[120px] truncate">
+                          {file.name}
+                        </span>
                         <button
-                          onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                          onClick={() =>
+                            setAttachments((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }
                           className="text-gray-400 hover:text-red-500 ml-1"
                         >
                           ×
@@ -531,7 +681,10 @@ export default function HREmailsPage() {
                   className="hidden"
                   onChange={(e) => {
                     if (e.target.files) {
-                      setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+                      setAttachments((prev) => [
+                        ...prev,
+                        ...Array.from(e.target.files!),
+                      ]);
                       e.target.value = "";
                     }
                   }}
