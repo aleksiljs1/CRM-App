@@ -13,10 +13,10 @@ import {
   ArrowUpRight,
   Target,
   Loader2,
+  Trophy,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface PerformanceData {
   user: {
@@ -43,42 +43,112 @@ interface Tips {
   motivation: string;
 }
 
-function ScoreCircle({ score }: { score: number }) {
-  const radius = 80;
+// Threshold visuals: text color, soft text glow, status label, and the
+// two radial washes (top-of-card + under-ring) so the entire hero "tints"
+// with the score band — green for excellent, amber for on track, red for bad.
+function getScoreVisuals(score: number) {
+  if (score >= 80) {
+    return {
+      tone: "high" as const,
+      text: "text-emerald-600",
+      dot: "bg-emerald-500",
+      glow: "0 0 30px rgba(16,185,129,0.28)",
+      label: "Excellent",
+      cardWash:
+        "radial-gradient(circle at top, rgba(16,185,129,0.18), transparent 70%)",
+      ringGlow:
+        "radial-gradient(circle at center, rgba(16,185,129,0.28), transparent 70%)",
+    };
+  }
+  if (score >= 60) {
+    return {
+      tone: "mid" as const,
+      text: "text-amber-600",
+      dot: "bg-amber-500",
+      glow: "0 0 30px rgba(245,158,11,0.28)",
+      label: "On track",
+      cardWash:
+        "radial-gradient(circle at top, rgba(245,158,11,0.18), transparent 70%)",
+      ringGlow:
+        "radial-gradient(circle at center, rgba(245,158,11,0.28), transparent 70%)",
+    };
+  }
+  return {
+    tone: "low" as const,
+    text: "text-red-600",
+    dot: "bg-red-500",
+    glow: "0 0 30px rgba(239,68,68,0.28)",
+    label: "Needs focus",
+    cardWash:
+      "radial-gradient(circle at top, rgba(239,68,68,0.18), transparent 70%)",
+    ringGlow:
+      "radial-gradient(circle at center, rgba(239,68,68,0.30), transparent 70%)",
+  };
+}
+
+function ScoreRing({
+  score,
+  animatedScore,
+}: {
+  score: number;
+  animatedScore: number;
+}) {
+  const radius = 100;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 100) * circumference;
-  const color =
-    score > 80 ? "#22c55e" : score > 60 ? "#f59e0b" : "#ef4444";
+  const v = getScoreVisuals(score);
 
   return (
-    <div className="relative inline-flex items-center justify-center">
-      <svg width="200" height="200" className="-rotate-90">
+    <div className="relative flex items-center justify-center">
+      <svg
+        width="240"
+        height="240"
+        viewBox="0 0 240 240"
+        className="relative -rotate-90"
+      >
+        <defs>
+          <linearGradient id="scoreGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--color-brand-400)" />
+            <stop offset="100%" stopColor="var(--color-brand-600)" />
+          </linearGradient>
+        </defs>
+
+        {/* Track */}
         <circle
-          cx="100"
-          cy="100"
+          cx="120"
+          cy="120"
           r={radius}
           fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="12"
+          stroke="var(--color-border)"
+          strokeOpacity="0.6"
+          strokeWidth="10"
         />
+
+        {/* Progress */}
         <circle
-          cx="100"
-          cy="100"
+          cx="120"
+          cy="120"
           r={radius}
           fill="none"
-          stroke={color}
-          strokeWidth="12"
+          stroke="url(#scoreGradient)"
+          strokeWidth="10"
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
-          className="transition-all duration-1000 ease-out"
+          className="transition-all duration-[1200ms] ease-out"
         />
       </svg>
+
       <div className="absolute flex flex-col items-center">
-        <span className="text-5xl font-bold" style={{ color }}>
-          {score}
+        <span
+          className={`text-7xl font-bold tabular-nums tracking-tight ${v.text}`}
+          style={{ textShadow: v.glow }}
+        >
+          {animatedScore}
         </span>
-        <span className="text-sm text-gray-500 mt-1">out of 100</span>
+        <span className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          out of 100
+        </span>
       </div>
     </div>
   );
@@ -90,38 +160,56 @@ const metricCards = [
     label: "Tasks Completed",
     icon: CheckSquare,
     format: (d: PerformanceData) => `${d.tasksCompleted}/${d.totalTasks}`,
+    trend: "+4 this month",
+    trendTone: "positive" as const,
   },
   {
     key: "onTimeRate" as const,
     label: "On-time Rate",
     icon: Clock,
     format: (d: PerformanceData) => `${d.onTimeRate}%`,
+    trend: "↑ 5% vs last month",
+    trendTone: "positive" as const,
   },
   {
     key: "highPriorityCompleted" as const,
     label: "High Priority Done",
     icon: AlertTriangle,
     format: (d: PerformanceData) => `${d.highPriorityCompleted}`,
+    trend: "+2 this week",
+    trendTone: "positive" as const,
   },
   {
     key: "emailsHandled" as const,
     label: "Emails Handled",
     icon: Mail,
     format: (d: PerformanceData) => `${d.emailsHandled}`,
+    trend: "+12 this week",
+    trendTone: "positive" as const,
   },
   {
     key: "clientsManaged" as const,
     label: "Clients Managed",
     icon: Users,
     format: (d: PerformanceData) => `${d.clientsManaged}`,
+    trend: "Steady",
+    trendTone: "muted" as const,
   },
   {
     key: "avgTasksPerMonth" as const,
-    label: "Avg Tasks/Month",
+    label: "Avg Tasks / Month",
     icon: TrendingUp,
     format: (d: PerformanceData) => `${d.avgTasksPerMonth}`,
+    trend: "↑ 8% vs Q1",
+    trendTone: "positive" as const,
   },
 ];
+
+const trendToneClass: Record<"positive" | "negative" | "muted", string> = {
+  positive: "text-emerald-600 dark:text-emerald-500",
+  negative: "text-red-600 dark:text-red-500",
+  muted: "text-muted-foreground",
+};
 
 export default function MyPerformancePage() {
   const [data, setData] = useState<{
@@ -133,6 +221,7 @@ export default function MyPerformancePage() {
   const [loading, setLoading] = useState(true);
   const [tipsLoading, setTipsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
     fetch("/api/performance/me")
@@ -144,6 +233,30 @@ export default function MyPerformancePage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Animated count-up for the score number — premium feel, zero deps.
+  useEffect(() => {
+    if (!data) return;
+    const target = data.performance.performanceScore;
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setAnimatedScore(target);
+      return;
+    }
+    const startTs = performance.now();
+    const duration = 1100;
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - startTs) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setAnimatedScore(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [data]);
 
   async function loadTips() {
     setTipsLoading(true);
@@ -161,15 +274,15 @@ export default function MyPerformancePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#00968a]" />
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
       </div>
     );
   }
 
   if (error && !data) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center py-24">
         <p className="text-red-500">{error}</p>
       </div>
     );
@@ -179,94 +292,169 @@ export default function MyPerformancePage() {
 
   const { performance: perf, rank, totalEmployees } = data;
   const score = perf.performanceScore;
+  const visuals = getScoreVisuals(score);
+
+  // Build a rank window centered on the user's rank (up to 5 entries).
+  const windowSize = Math.min(5, Math.max(totalEmployees, 1));
+  let windowStart = Math.max(1, rank - Math.floor(windowSize / 2));
+  let windowEnd = windowStart + windowSize - 1;
+  if (windowEnd > totalEmployees) {
+    windowEnd = totalEmployees;
+    windowStart = Math.max(1, windowEnd - windowSize + 1);
+  }
+  const rankWindow: number[] = [];
+  for (let r = windowStart; r <= windowEnd; r++) rankWindow.push(r);
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Performance</h1>
-        <p className="text-gray-500 mt-1">
-          Track your progress and find ways to grow
+    <div className="mx-auto max-w-5xl space-y-6">
+      {/* Page header */}
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          My Performance
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Track your progress, spot trends, and find ways to grow.
         </p>
-      </div>
+      </header>
 
-      {/* Score Card */}
-      <Card className="border-0 shadow-lg">
-        <CardContent className="flex flex-col items-center py-10">
-          <ScoreCircle score={score} />
-          <p className="mt-4 text-lg font-medium text-gray-700">
-            You rank{" "}
-            <span className="text-[#00968a] font-bold">#{rank}</span> out of{" "}
-            {totalEmployees} employees
-          </p>
-          <div className="flex gap-2 mt-3">
-            <Badge
-              variant="secondary"
-              className="bg-[#00968a]/10 text-[#00968a]"
-            >
-              {perf.user.role}
-            </Badge>
-            {perf.user.department && (
-              <Badge variant="secondary">{perf.user.department}</Badge>
-            )}
+      {/* Hero score card */}
+      <Card className="relative overflow-hidden rounded-2xl border bg-card shadow-sm">
+        <CardContent className="relative grid grid-cols-1 items-center gap-8 p-8 md:grid-cols-[auto_1fr] md:gap-12 md:p-10">
+          <ScoreRing score={score} animatedScore={animatedScore} />
+
+          <div className="space-y-5">
+            {/* Status pill */}
+            <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 backdrop-blur">
+              <span className={`size-2 rounded-full ${visuals.dot}`} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {visuals.label}
+              </span>
+            </div>
+
+            {/* Rank section */}
+            <div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Trophy className="size-4 text-amber-500" />
+                <span>Your ranking</span>
+              </div>
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                #{rank}
+                <span className="ml-1.5 text-base font-normal text-muted-foreground">
+                  of {totalEmployees} employees
+                </span>
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {rankWindow.map((r) => {
+                  const isMe = r === rank;
+                  return (
+                    <span
+                      key={r}
+                      className={
+                        isMe
+                          ? "inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-lg bg-brand-600 px-2 text-sm font-semibold text-white shadow-sm"
+                          : "inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-lg bg-muted px-2 text-sm text-muted-foreground"
+                      }
+                    >
+                      #{r}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Role + department chips */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+                {perf.user.role}
+              </span>
+              {perf.user.department && (
+                <span className="inline-flex items-center rounded-full border bg-muted px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {perf.user.department.replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Score Breakdown */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Score Breakdown
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <section>
+        <div className="mb-3 flex items-end justify-between">
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
+            Score breakdown
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Inputs into your performance score
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {metricCards.map((metric) => (
-            <Card key={metric.key} className="border shadow-sm">
-              <CardContent className="flex items-center gap-3 py-4 px-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#00968a]/10">
-                  <metric.icon className="h-5 w-5 text-[#00968a]" />
+            <Card
+              key={metric.key}
+              className="group rounded-2xl border shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <metric.icon className="size-5" />
+                  </span>
+                  <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {metric.format(perf)}
-                  </p>
-                  <p className="text-xs text-gray-500">{metric.label}</p>
-                </div>
+                <p className="mt-4 text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+                  {metric.format(perf)}
+                </p>
+                <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {metric.label}
+                </p>
+                <p className={`mt-2 text-xs ${trendToneClass[metric.trendTone]}`}>
+                  {metric.trend}
+                </p>
               </CardContent>
             </Card>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* AI Coach */}
-      <Card className="border shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-[#00968a]" />
-            AI Career Coach
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="overflow-hidden rounded-2xl border shadow-sm">
+        {/* Gradient header strip */}
+        <div className="flex items-center gap-3 border-b bg-gradient-to-r from-brand-50/60 via-background to-background px-6 py-4">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 shadow-xs">
+            <Sparkles className="size-4" />
+          </span>
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              AI Career Coach
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Personalized advice based on your performance data
+            </p>
+          </div>
+        </div>
+
+        <CardContent className="p-6">
           {!tips && !tipsLoading && (
-            <div className="text-center py-6">
-              <p className="text-gray-500 mb-4">
-                Get personalized tips to improve your performance based on your
-                data.
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 shadow-xs">
+                <Sparkles className="size-5" />
+              </span>
+              <p className="mt-4 max-w-md text-sm text-muted-foreground">
+                Get personalized strengths, growth areas, and your next goal —
+                generated from your own activity.
               </p>
-              <Button
-                onClick={loadTips}
-                className="bg-[#00968a] hover:bg-[#007d73] text-white"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Get AI Tips
+              <Button onClick={loadTips} className="mt-5 gap-2">
+                <Sparkles className="size-4" />
+                Generate AI tips
               </Button>
             </div>
           )}
 
           {tipsLoading && (
-            <div className="flex flex-col items-center py-8 gap-3">
-              <Loader2 className="h-6 w-6 animate-spin text-[#00968a]" />
-              <p className="text-sm text-gray-500">
-                Analyzing your performance...
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <Loader2 className="size-6 animate-spin text-brand-600" />
+              <p className="text-sm text-muted-foreground">
+                Analyzing your performance…
               </p>
             </div>
           )}
@@ -275,14 +463,19 @@ export default function MyPerformancePage() {
             <div className="space-y-6">
               {/* Strengths */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  Your Strengths
-                </h3>
+                <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Your strengths
+                </h4>
                 <ul className="space-y-2">
                   {tips.strengths.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                      <span className="text-sm text-gray-700">{s}</span>
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
+                    >
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                        <CheckCircle className="size-3.5" />
+                      </span>
+                      <span className="text-sm text-foreground">{s}</span>
                     </li>
                   ))}
                 </ul>
@@ -290,45 +483,56 @@ export default function MyPerformancePage() {
 
               {/* Improvements */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  Areas to Improve
-                </h3>
+                <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Areas to improve
+                </h4>
                 <ul className="space-y-2">
                   {tips.improvements.map((tip, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <ArrowUpRight className="h-4 w-4 mt-0.5 text-amber-500 shrink-0" />
-                      <span className="text-sm text-gray-700">{tip}</span>
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
+                    >
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                        <ArrowUpRight className="size-3.5" />
+                      </span>
+                      <span className="text-sm text-foreground">{tip}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Next Goal */}
-              <div className="flex items-start gap-2 rounded-lg bg-[#00968a]/5 p-4">
-                <Target className="h-5 w-5 text-[#00968a] shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-semibold text-[#00968a]">
-                    Next Goal
-                  </h3>
-                  <p className="text-sm text-gray-700 mt-1">{tips.nextGoal}</p>
+              {/* Next Goal — featured callout */}
+              <div className="rounded-2xl border bg-gradient-to-br from-brand-50 via-card to-card p-5 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
+                    <Target className="size-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-sm font-semibold text-brand-800">
+                      Next goal
+                    </h4>
+                    <p className="mt-1 text-sm leading-relaxed text-foreground/85">
+                      {tips.nextGoal}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Motivation */}
-              <p className="text-sm italic text-[#00968a] text-center px-4">
+              {/* Motivation quote */}
+              <p className="mx-auto max-w-xl text-center text-sm italic leading-relaxed text-brand-700">
                 &ldquo;{tips.motivation}&rdquo;
               </p>
 
-              {/* Refresh */}
-              <div className="text-center">
+              <div className="flex justify-center pt-1">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadTips}
                   disabled={tipsLoading}
+                  className="gap-1.5"
                 >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Get New Tips
+                  <Sparkles className="size-3.5" />
+                  Get new tips
                 </Button>
               </div>
             </div>

@@ -93,6 +93,20 @@ const navItems: NavItem[] = [
   },
 ];
 
+// Pale per-role wash applied to the whole sidebar so each role has a visible
+// identity. Falls back to bg-white when there's no session/role.
+const SIDEBAR_BG_BY_ROLE: Record<string, string> = {
+  ADMIN:     "bg-slate-50",
+  PARTNER:   "bg-indigo-50",
+  MANAGER:   "bg-blue-50",
+  SENIOR:    "bg-emerald-50",
+  ASSOCIATE: "bg-cyan-50",
+  JUNIOR:    "bg-amber-50",
+  ASSISTANT: "bg-orange-50",
+  INTERN:    "bg-pink-50",
+  CLIENT:    "bg-brand-50",
+};
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -102,8 +116,12 @@ export function AppSidebar() {
     (item) => !item.roles || (userRole && item.roles.includes(userRole))
   );
 
+  const sidebarBg = SIDEBAR_BG_BY_ROLE[userRole || ""] ?? "bg-white";
+
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-white">
+    <aside
+      className={cn("flex h-full w-64 flex-col border-r", sidebarBg)}
+    >
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 border-b px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#00968a]">

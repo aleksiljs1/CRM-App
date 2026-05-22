@@ -48,6 +48,21 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Brand color scale (teal #00968a). Emits --color-brand-* CSS vars and
+   generates bg-brand-*, text-brand-*, border-brand-*, ring-brand-* utilities. */
+@theme {
+  --color-brand-50: oklch(0.97 0.03 190);
+  --color-brand-100: oklch(0.93 0.06 190);
+  --color-brand-200: oklch(0.86 0.09 190);
+  --color-brand-300: oklch(0.77 0.12 190);
+  --color-brand-400: oklch(0.68 0.14 188);
+  --color-brand-500: oklch(0.6 0.15 187);
+  --color-brand-600: oklch(0.55 0.14 187); /* #00968a */
+  --color-brand-700: oklch(0.47 0.12 187);
+  --color-brand-800: oklch(0.38 0.1 187);
+  --color-brand-900: oklch(0.28 0.07 187);
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -55,8 +70,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: var(--color-brand-600);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -90,7 +105,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --primary: var(--color-brand-500);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);

@@ -1,0 +1,287 @@
+==============================================================================
+KRESTON CRM — FRONTEND SPECIFICATION (for Lovable)
+==============================================================================
+Purpose: full context on the current frontend so a better UI / front page can
+be designed. This describes the app EXACTLY as it is today.
+Generated: 2026-05-22
+
+
+------------------------------------------------------------------------------
+1. WHAT THE APP IS
+------------------------------------------------------------------------------
+"Kreston CRM" — an internal CRM / workspace for Kreston Albania, an accounting,
+audit, tax and advisory firm. It is a multi-department, role-based business app
+used by firm staff (not the public).
+
+Core features:
+  - Role-based, department-isolated dashboards
+  - Email hub with AI prioritization (Google Gemini) + IMAP inbox polling
+  - Task management (Kanban board with a TODO -> COMPLETED workflow)
+  - Client management + client pipeline (LEAD / ACTIVE / INACTIVE)
+  - Client document submission & AI validation
+  - Performance tracking with AI review + team performance
+  - Team management
+
+Brand: name "Kreston CRM", brand color TEAL #00968a, logo is a teal tile with
+a white bold letter "K".
+
+
+------------------------------------------------------------------------------
+2. TECH STACK (must be matched / respected)
+------------------------------------------------------------------------------
+  - Framework:      Next.js 16.2.6 — App Router, React Server Components
+  - Language:       TypeScript 5
+  - UI runtime:     React 19.2.4
+  - Styling:        Tailwind CSS v4 (CSS-first; configured INSIDE
+                    src/app/globals.css — there is NO tailwind.config.js)
+  - Components:     shadcn/ui v4 — style "base-nova", base color "neutral",
+                    CSS variables ON
+  - UI primitives:  @base-ui/react  (Base UI — NOT Radix)
+  - Icons:          lucide-react
+  - Charts:         recharts v3
+  - Toasts:         sonner
+  - Auth:           NextAuth v4 (credentials provider, JWT sessions)
+  - Database/ORM:   Prisma 7 + PostgreSQL
+  - AI:             Google Gemini (@google/generative-ai)
+  - Email:          nodemailer (SMTP send) + imap-simple & mailparser (inbox)
+  - Fonts:          Geist / Geist Mono via next/font (create-next-app default)
+
+IMPORTANT FOR LOVABLE:
+Lovable normally generates Vite + React + Tailwind + shadcn (Radix-based).
+This project is Next.js App Router + Tailwind v4 + shadcn "base-nova" on
+@base-ui/react. Output will NOT drop in unchanged. Please generate Next.js
+App Router code, Tailwind v4 (CSS-first), and use @base-ui/react primitives.
+Do not introduce a tailwind.config.js.
+
+
+------------------------------------------------------------------------------
+3. CURRENT DESIGN SYSTEM (src/app/globals.css)
+------------------------------------------------------------------------------
+The current theme is the DEFAULT shadcn "neutral" palette — grayscale, in the
+oklch color space, with a light theme and a dark theme (.dark class).
+
+  --background        white            --foreground   near-black
+  --primary           near-black       --primary-foreground  near-white
+  --secondary/muted/accent  light gray
+  --destructive       red
+  --border / --input  light gray
+  --radius            0.625rem (10px)  -> radius-sm..4xl scale derived from it
+  --chart-1..5        grayscale steps
+
+WEAKNESS / WHY A REDESIGN IS WANTED:
+  - The teal brand color #00968a is NOT part of the token system. It is
+    hard-coded as a hex literal (bg-[#00968a], text-[#00968a], etc.) ad hoc
+    across many components. It should become a real brand token scale.
+  - Everything else is flat neutral gray — no visual hierarchy, weak depth,
+    monotone typography, primary buttons are black instead of brand.
+  - The landing/front page is extremely bare (see section 8).
+
+GOAL: a calm, premium, data-dense SaaS look (Linear / Notion / Attio vibe),
+with the teal brand color used as a real identity system.
+
+
+------------------------------------------------------------------------------
+4. ROUTES / PAGE MAP
+------------------------------------------------------------------------------
+PUBLIC
+  /                         Landing / front page (logo + tagline + Sign In)
+  /login                    Login page (email + password, NextAuth)
+
+APP (require auth; wrapped in dashboard shell = sidebar + main content)
+  /dashboard                Index — redirects to the role-specific dashboard
+  /dashboard/admin          Admin dashboard / Settings
+  /dashboard/partner        Partner dashboard (firm-wide overview)
+  /dashboard/client         Client dashboard (external client portal view)
+  /dashboard/clients        Clients list
+  /dashboard/hr             Department "Overview" dashboard (stat cards + recent
+                            emails). Despite the /hr path it is generic and
+                            shows the signed-in user's department.
+  /dashboard/hr/emails      Emails inbox (split list + thread reading pane,
+                            AI "prioritize", reply with attachments)
+  /dashboard/hr/tasks       Tasks — Kanban board (TODO/IN_PROGRESS/REVIEW/
+                            APPROVED/COMPLETED), task detail modal, new task
+  /dashboard/hr/documents   Documents library
+  /dashboard/hr/performance My Performance (personal score + leaderboard)
+  /dashboard/manager        Manager dashboard (team KPIs + charts)
+  /dashboard/manager/clients Client Pipeline (Kanban by client status)
+  /dashboard/manager/performance  Team Performance
+  /dashboard/manager/team   My Team (team members management)
+  /dashboard/reports        Reports
+
+The /dashboard/hr/* tabs (Overview, Emails, Tasks, Documents) share a sub-tab
+navigation bar shown above the page content.
+
+
+------------------------------------------------------------------------------
+5. SIDEBAR NAVIGATION (information architecture)
+------------------------------------------------------------------------------
+Persistent left sidebar (260px-ish, white). Top: "K" logo tile + "Kreston CRM".
+Bottom: signed-in user avatar (initial), name, role, sign-out button.
+
+Nav items and which roles can see each:
+  Dashboard         -> all staff roles (everyone except CLIENT)
+  Emails            -> all staff roles
+  Tasks             -> all staff roles
+  Documents         -> all staff roles
+  My Performance    -> SENIOR, ASSOCIATE, JUNIOR, ASSISTANT, INTERN, MANAGER
+  Clients           -> ADMIN, PARTNER, MANAGER, SENIOR, ASSOCIATE
+  Client Pipeline   -> ADMIN, PARTNER, MANAGER
+  Reports           -> ADMIN, PARTNER, MANAGER
+  Performance       -> ADMIN, PARTNER, MANAGER
+  My Team           -> ADMIN, PARTNER, MANAGER
+  Settings          -> ADMIN only
+Active item is currently highlighted with teal-tinted background + teal text.
+
+
+------------------------------------------------------------------------------
+6. ROLES, DEPARTMENTS & ENUMS (preserve exactly)
+------------------------------------------------------------------------------
+Role:        ADMIN, PARTNER, MANAGER, SENIOR, ASSOCIATE, JUNIOR, ASSISTANT,
+             INTERN, CLIENT
+Department:  AUDIT, ACCOUNTING_TAX, BOOKKEEPING_PAYROLL, LEGAL, ADVISORY, HR,
+             MARKETING, FINANCE
+ClientStatus:      LEAD, ACTIVE, INACTIVE
+TaskStatus:        TODO, IN_PROGRESS, REVIEW, APPROVED, COMPLETED
+TaskPriority:      LOW, MEDIUM, HIGH, URGENT
+SubmissionStatus:  INCOMPLETE, COMPLETE, UNDER_REVIEW, APPROVED, REJECTED
+NotificationType:  EMAIL, TASK, DOCUMENT, SYSTEM
+
+
+------------------------------------------------------------------------------
+7. DATA MODELS (Prisma — drives what each screen shows)
+------------------------------------------------------------------------------
+  User              id, email, name, role, department, avatar, isActive
+  Client            companyName, contactName, contactEmail, phone, industry,
+                    status (ClientStatus), assignedTo (User)
+  Email             threadId, parentId, sender, recipientDept, subject, body,
+                    isIncoming, isRead, isReplied, aiImportance, attachments
+  Task              title, description, status, priority, deadline, department,
+                    assignedTo, createdBy, client, completedAt, attachments,
+                    statusHistory
+  TaskStatusHistory fromStatus, toStatus, changedAt, changedBy
+  TaskAttachment    fileName, filePath, fileSize, mimeType
+  ProcessType       name, department, description (e.g. "Annual Audit")
+  RequiredDocument  documentName, description, isMandatory
+  ClientSubmission  client, processType, status (SubmissionStatus), aiValidation
+  SubmittedDocument fileName, filePath, fileSize, aiMatchedTo, aiConfidence
+  Notification      title, message, isRead, type (NotificationType), link
+  AuditLog          userId, action, entity, entityId, details
+  EmailAttachment   fileName, filePath, fileSize, mimeType
+
+
+------------------------------------------------------------------------------
+8. CURRENT FRONT / LANDING PAGE  (src/app/page.tsx) — THE MAIN THING TO IMPROVE
+------------------------------------------------------------------------------
+Today it is extremely minimal — a single centered block:
+  - Background: faint teal gradient (from-[#00968a]/10 via-white to-[#00968a]/5)
+  - A round teal circle (80x80) with a white bold "K"
+  - H1: "Kreston CRM"
+  - Paragraph: "AI-powered client relationship management for Kreston Albania"
+  - One teal "Sign In" button -> links to /login
+
+It needs to become a real, professional landing page: hero section, a clear
+value proposition, feature highlights (AI email prioritization, task workflow,
+client document validation, performance tracking, department dashboards),
+trust/branding, and a strong primary call-to-action to Sign In. Keep it on
+brand: teal #00968a, the "K" mark, clean premium SaaS aesthetic. Light theme.
+
+
+------------------------------------------------------------------------------
+9. CURRENT LOGIN PAGE (src/app/(auth)/login/page.tsx)
+------------------------------------------------------------------------------
+A centered card on a soft teal gradient background: "K" logo tile, "Kreston
+CRM" title, email + password fields (shadcn Input/Label), a teal "Sign In"
+button. Uses NextAuth signIn("credentials", ...). On success it redirects to
+the role-specific dashboard. Shows an inline error on bad credentials.
+
+
+------------------------------------------------------------------------------
+10. COMPONENT INVENTORY
+------------------------------------------------------------------------------
+src/components/
+  sidebar.tsx          App sidebar (nav + user strip) — described in section 5
+  dashboard-charts.tsx recharts wrappers:
+                         - TasksByDepartmentChart (bar chart)
+                         - ClientPipelineChart (pie chart)
+  ui/                  shadcn primitives (keep names, built on @base-ui/react):
+                         badge, button, card, input, label, separator, textarea
+
+Button variants: default, destructive, outline, secondary, ghost, link
+Button sizes:    default, sm, lg, icon
+Badge variants:  default, secondary, destructive, outline, ghost, link
+(There is no Tabs/Dialog/Avatar/Tooltip/Progress shadcn component yet — those
+are currently hand-built inline where needed.)
+
+
+------------------------------------------------------------------------------
+11. SCREEN-BY-SCREEN SUMMARY (what each app page shows)
+------------------------------------------------------------------------------
+Overview dashboard (/dashboard/hr): 4 stat cards (Unread Emails, Total Clients,
+  Pending Tasks, Open Processes) + a "Recent Unread Emails" list + quick action
+  buttons. Title shows the user's department.
+
+Emails (/dashboard/hr/emails): two-pane inbox. Left = paginated email list with
+  filters (all / unread / read / unreplied / replied) + search. Right = email
+  thread reading pane with reply box + file attachments. "Order by Important"
+  triggers AI (Gemini) prioritization. Polls inbox every 10s.
+
+Tasks (/dashboard/hr/tasks): Kanban board, 5 columns (To Do, In Progress,
+  Review, Approved, Completed) + overdue indicator. Task cards show priority
+  badge, client, department, deadline, assignee. Task detail modal with a
+  workflow progress bar + status history. "New Task" form.
+
+Documents (/dashboard/hr/documents): document library / client submissions.
+
+My Performance (/dashboard/hr/performance): personal performance score (0-100),
+  rank vs other employees, leaderboard strip, score breakdown bars, AI coaching
+  tips, role/department tags.
+
+Manager dashboard (/dashboard/manager): team KPI cards, charts (tasks by
+  department, client pipeline), department workload, upcoming deadlines,
+  recent activity.
+
+Client Pipeline (/dashboard/manager/clients): Kanban of clients grouped by
+  ClientStatus (LEAD / ACTIVE / INACTIVE), client cards, search, summary cards.
+
+Team Performance (/dashboard/manager/performance): team-wide performance, AI
+  executive summary, per-member scores, raise recommendations.
+
+My Team (/dashboard/manager/team): list/manage team members.
+
+Admin (/dashboard/admin): admin settings / user management.
+Partner (/dashboard/partner): firm-wide partner overview.
+Client (/dashboard/client): external client portal view (submissions, docs,
+  messages).
+Clients (/dashboard/clients): clients list.
+Reports (/dashboard/reports): reporting / analytics.
+
+
+------------------------------------------------------------------------------
+12. WHAT TO DELIVER / DESIGN GOALS
+------------------------------------------------------------------------------
+PRIMARY ASK: a better, professional FRONT / LANDING PAGE (section 8).
+SECONDARY (optional): a cohesive visual upgrade of the app UI.
+
+Design direction:
+  - Vibe: calm, premium, data-dense SaaS (Linear x Notion x Attio).
+  - Brand: teal #00968a as a full color scale (50..900), used as the identity
+    color — primary buttons, active states, accents, the "K" mark.
+  - Surfaces: layered — app background / sidebar / cards should be visually
+    distinct (not all flat white). Cards: clear border + soft shadow + radius.
+  - Typography: strong hierarchy — large bold page titles, clear section
+    headings, readable body, tabular numbers for stats.
+  - Icons: lucide-react only. No emoji.
+  - Keep it light-theme first (a dark theme already exists via .dark and can be
+    kept consistent).
+  - Charts: recharts; use the brand palette for series colors.
+
+CONSTRAINTS:
+  - Next.js 16 App Router + Tailwind v4 (CSS-first) + shadcn base-nova on
+    @base-ui/react. No tailwind.config.js. No Radix.
+  - Do not change routing, data models, roles/enums, or API behavior.
+  - All colors via CSS-variable design tokens — no hard-coded hex in components
+    (this is the #1 thing wrong with the current code).
+
+==============================================================================
+END OF SPEC
+==============================================================================

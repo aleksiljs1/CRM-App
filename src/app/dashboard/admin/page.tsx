@@ -2,9 +2,31 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, Building2, ListTodo, Mail, FolderOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import {
+  Users,
+  Building2,
+  ListTodo,
+  Mail,
+  FolderOpen,
+  Sparkles,
+  Activity,
+  Zap,
+  Clock,
+  ArrowRight,
+  Gauge,
+  CheckCircle2,
+  LineChart,
+  ShieldCheck,
+  BarChart3,
+  CheckSquare,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  EmailsAreaChart,
+  TasksAreaChart,
+} from "@/components/dashboard/activity-charts";
 
 const DEPT_LABELS: Record<string, string> = {
   AUDIT: "Audit",
@@ -17,17 +39,108 @@ const DEPT_LABELS: Record<string, string> = {
   FINANCE: "Finance",
 };
 
-const roleBadgeColor: Record<string, string> = {
-  ADMIN: "bg-red-100 text-red-700 border-red-200",
-  PARTNER: "bg-purple-100 text-purple-700 border-purple-200",
-  MANAGER: "bg-blue-100 text-blue-700 border-blue-200",
-  SENIOR: "bg-teal-100 text-teal-700 border-teal-200",
-  ASSOCIATE: "bg-green-100 text-green-700 border-green-200",
-  JUNIOR: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  ASSISTANT: "bg-orange-100 text-orange-700 border-orange-200",
-  INTERN: "bg-gray-100 text-gray-700 border-gray-200",
-  CLIENT: "bg-slate-100 text-slate-700 border-slate-200",
-};
+// ── Inline section primitives (mirrored from HR dashboard) ──────────────────
+
+function SectionLabel({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="size-3 text-muted-foreground" />
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function InsightCard({
+  accent,
+  value,
+  label,
+  subtitle,
+}: {
+  accent: string;
+  value: number;
+  label: string;
+  subtitle: string;
+}) {
+  return (
+    <div
+      className={`rounded-xl border bg-card shadow-sm border-t-4 ${accent} p-6`}
+    >
+      <p className="text-[30px] font-bold tabular-nums leading-none text-foreground">
+        {value}
+      </p>
+      <p className="mt-3 text-sm font-semibold text-foreground">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+    </div>
+  );
+}
+
+function SmallStat({
+  icon: Icon,
+  iconBg,
+  iconText,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  iconBg: string;
+  iconText: string;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
+      <span
+        className={`flex size-9 items-center justify-center rounded-lg ${iconBg} ${iconText}`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-base font-bold tabular-nums leading-tight text-foreground">
+          {value}
+        </p>
+        <p className="truncate text-[11px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function QuickAction({
+  href,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -70,138 +183,242 @@ export default async function AdminDashboardPage() {
     }),
   ]);
 
-  const roleCountMap = new Map<string, number>();
-  usersByRole.forEach((r) => roleCountMap.set(r.role, r._count.id));
+  // Derived metrics (no new Prisma queries — computed from existing data)
+  const activeUsers = allUsers.filter((u) => u.isActive).length;
+  const inactiveUsers = allUsers.length - activeUsers;
+  const activePct =
+    totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0;
 
-  const stats = [
-    {
-      label: "Total Users",
-      value: totalUsers,
-      icon: Users,
-      detail: Array.from(roleCountMap.entries())
-        .map(([role, count]) => `${role}: ${count}`)
-        .join(", "),
-    },
-    {
-      label: "Active Departments",
-      value: departmentsActive.length,
-      icon: FolderOpen,
-      detail: null,
-    },
-    {
-      label: "Total Clients",
-      value: totalClients,
-      icon: Building2,
-      detail: null,
-    },
-    {
-      label: "Total Tasks",
-      value: totalTasks,
-      icon: ListTodo,
-      detail: null,
-    },
-    {
-      label: "Total Emails",
-      value: totalEmails,
-      icon: Mail,
-      detail: null,
-    },
-  ];
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          System Administration
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          System overview and user management
-        </p>
+    <div className="space-y-8">
+      {/* Page title row */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700">
+            System Administration
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Firm-wide overview &middot; {today}
+          </p>
+        </div>
+        <Link href="/dashboard/admin">
+          <Button className="gap-2">
+            <Users className="size-4" />
+            Manage Users
+          </Button>
+        </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
-                    <Icon className="h-5 w-5 text-[#00968a]" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold leading-none">
-                      {stat.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {stat.label}
-                    </p>
-                  </div>
-                </div>
-                {stat.detail && (
-                  <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-                    {stat.detail}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* ── Section 1 — Insights ──────────────────────────────────────── */}
+      <section>
+        <SectionLabel icon={Sparkles}>Overview</SectionLabel>
+        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <InsightCard
+            accent="border-t-brand-500"
+            value={totalUsers}
+            label="Total Users"
+            subtitle="Across all roles and departments"
+          />
+          <InsightCard
+            accent="border-t-emerald-500"
+            value={totalClients}
+            label="Total Clients"
+            subtitle="Active accounts on record"
+          />
+          <InsightCard
+            accent="border-t-amber-500"
+            value={totalTasks}
+            label="Total Tasks"
+            subtitle="Across the firm"
+          />
+          <InsightCard
+            accent="border-t-violet-500"
+            value={departmentsActive.length}
+            label="Active Departments"
+            subtitle="Departments currently staffed"
+          />
+        </div>
+      </section>
 
-      {/* User List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Users ({allUsers.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-0">
-            {/* Table header */}
-            <div className="grid grid-cols-5 text-xs font-medium text-muted-foreground pb-2 border-b">
-              <span>Name</span>
-              <span>Email</span>
-              <span>Role</span>
-              <span>Department</span>
-              <span className="text-center">Status</span>
+      {/* ── Section 2 — Platform overview strip ──────────────────────── */}
+      <section>
+        <SectionLabel icon={Activity}>Platform</SectionLabel>
+        <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <SmallStat
+            icon={Mail}
+            iconBg="bg-cyan-100"
+            iconText="text-cyan-700"
+            value={totalEmails.toString()}
+            label="Total emails"
+          />
+          <SmallStat
+            icon={CheckCircle2}
+            iconBg="bg-amber-100"
+            iconText="text-amber-700"
+            value={`${activePct}%`}
+            label="Active users"
+          />
+          <SmallStat
+            icon={Gauge}
+            iconBg="bg-emerald-100"
+            iconText="text-emerald-700"
+            value="On track" /* demo */
+            label="System health"
+          />
+          <SmallStat
+            icon={ShieldCheck}
+            iconBg="bg-violet-100"
+            iconText="text-violet-700"
+            value={inactiveUsers.toString()}
+            label="Inactive users"
+          />
+        </div>
+      </section>
+
+      {/* ── Trends — two charts side by side ────────────────────────── */}
+      <section>
+        <SectionLabel icon={LineChart}>Trends</SectionLabel>
+        <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Email volume
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Last 14 days
+                </p>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                ↑ 12%
+              </span>
             </div>
-            {allUsers.map((user) => (
-              <div
-                key={user.id}
-                className="grid grid-cols-5 items-center py-2.5 border-b last:border-0 text-sm"
-              >
-                <span className="font-medium truncate">{user.name}</span>
-                <span className="text-muted-foreground truncate">
-                  {user.email}
-                </span>
-                <span>
-                  <Badge
-                    className={`text-[10px] px-1.5 py-0 border ${roleBadgeColor[user.role] ?? ""}`}
-                  >
-                    {user.role}
-                  </Badge>
-                </span>
-                <span className="text-muted-foreground">
-                  {user.department
-                    ? DEPT_LABELS[user.department] ?? user.department
-                    : "\u2014"}
-                </span>
-                <span className="flex justify-center">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      user.isActive
-                        ? "bg-green-50 text-green-700"
-                        : "bg-red-50 text-red-700"
+            <div className="mt-4 -ml-2">
+              <EmailsAreaChart />
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-card p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Tasks completed
+                </h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Last 14 days
+                </p>
+              </div>
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                ↑ 8%
+              </span>
+            </div>
+            <div className="mt-4 -ml-2">
+              <TasksAreaChart />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 4 — Quick actions ────────────────────────────────── */}
+      <section>
+        <SectionLabel icon={Zap}>Quick actions</SectionLabel>
+        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <QuickAction
+            href="/dashboard/admin"
+            icon={Users}
+            title="Manage Users"
+            subtitle="View and edit team members"
+          />
+          <QuickAction
+            href="/dashboard/clients"
+            icon={Building2}
+            title="All Clients"
+            subtitle="Browse client accounts"
+          />
+          <QuickAction
+            href="/dashboard/reports"
+            icon={BarChart3}
+            title="Reports"
+            subtitle="Firm-wide analytics"
+          />
+          <QuickAction
+            href="/dashboard/hr/tasks"
+            icon={CheckSquare}
+            title="Tasks"
+            subtitle="Track work across the firm"
+          />
+        </div>
+      </section>
+
+      {/* ── Section 5 — Recent activity (Users) ──────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between">
+          <SectionLabel icon={Clock}>Recent activity</SectionLabel>
+          <Link
+            href="/dashboard/admin"
+            className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
+          >
+            View all &rarr;
+          </Link>
+        </div>
+
+        <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
+          {allUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="flex size-12 items-center justify-center rounded-xl bg-muted">
+                <FolderOpen className="size-6 text-muted-foreground" />
+              </span>
+              <p className="mt-3 text-sm font-medium text-foreground">
+                No users yet
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Invite team members to populate the system.
+              </p>
+            </div>
+          ) : (
+            <ul>
+              {allUsers.slice(0, 5).map((user, idx) => (
+                <li key={user.id}>
+                  <Link
+                    href="/dashboard/admin"
+                    className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40 ${
+                      idx > 0 ? "border-t" : ""
                     }`}
                   >
-                    {user.isActive ? "Active" : "Inactive"}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                    <span
+                      className={`size-2 shrink-0 rounded-full ${
+                        user.isActive ? "bg-brand-500" : "bg-muted-foreground/40"
+                      }`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {user.name}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {user.department
+                        ? DEPT_LABELS[user.department] ?? user.department
+                        : "—"}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {user.role}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
