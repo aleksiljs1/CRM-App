@@ -413,19 +413,6 @@ export default function HREmailsPage() {
             <Plus className="h-4 w-4" />
             Compose
           </Button>
-          <Button
-            variant="outline"
-            onClick={handlePrioritize}
-            disabled={prioritizing}
-            className="gap-2 flex-1 md:flex-none"
-          >
-            {prioritizing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-            )}
-            {prioritizing ? "Analyzing..." : "Sort by Importance"}
-          </Button>
         </div>
       </div>
 
@@ -483,7 +470,7 @@ export default function HREmailsPage() {
             ) : (
               <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             )}
-            {prioritizing ? "Analyzing..." : "Order by Important"}
+            {prioritizing ? "Analyzing..." : "Sort by importance"}
           </Button>
         </div>
       </div>
