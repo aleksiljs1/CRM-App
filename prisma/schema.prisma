@@ -98,6 +98,7 @@ model User {
   manualDocuments  ManualDocument[] @relation("ManualDocuments")
   taskComments     TaskComment[] @relation("TaskCommentAuthor")
   generatedReports PerformanceReport[] @relation("GeneratedReports")
+  createdTemplates DocumentTemplate[] @relation("TemplateCreator")
 
   @@index([email])
   @@index([role])
@@ -172,6 +173,7 @@ model ProcessType {
   requiredDocuments RequiredDocument[]
   submissions       ClientSubmission[]
   tasks             Task[]
+  templates         DocumentTemplate[]
 
   @@index([department])
 }
@@ -452,4 +454,27 @@ model PerformanceReport {
   @@index([department])
   @@index([generatedById])
   @@index([createdAt])
+}
+
+// ─── Document Templates ─────────────────────────────────────────────────────
+
+model DocumentTemplate {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  department    Department
+  processTypeId String?
+  content       String      // The template text with {{placeholders}}
+  placeholders  Json?       // Array of placeholder names: ["companyName", "founderName", "date"]
+  createdById   String
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  createdBy   User         @relation("TemplateCreator", fields: [createdById], references: [id])
+  processType ProcessType? @relation(fields: [processTypeId], references: [id], onDelete: SetNull)
+
+  @@index([department])
+  @@index([processTypeId])
+  @@index([createdById])
 }

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, department, description, documents } = body;
+    const { name, department, description, documents, clientId } = body;
 
     if (!name || !department) {
       return Response.json(
@@ -111,6 +111,17 @@ export async function POST(request: NextRequest) {
         _count: { select: { requiredDocuments: true } },
       },
     });
+
+    // If a client is attached, create a submission for them
+    if (clientId) {
+      await prisma.clientSubmission.create({
+        data: {
+          clientId,
+          processTypeId: process.id,
+          status: "INCOMPLETE",
+        },
+      });
+    }
 
     return Response.json({ process }, { status: 201 });
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,10 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  TrendingUp,
 } from "lucide-react";
+
+const PerformancePage = lazy(() => import("@/app/dashboard/manager/performance/page"));
 
 interface TeamMember {
   user: {
@@ -434,6 +437,7 @@ export default function TeamPage() {
   const [error, setError] = useState("");
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [toast, setToast] = useState("");
+  const [activeTab, setActiveTab] = useState<"team" | "performance">("team");
 
   const isManagerPlus = ["ADMIN", "PARTNER", "MANAGER"].includes(
     session?.user?.role || ""
@@ -489,24 +493,59 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6 p-3 md:p-6">
-      {/* Header */}
+      {/* Header with tabs */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <h1 className="text-lg md:text-2xl font-bold text-foreground">My Team</h1>
+          <h1 className="text-lg md:text-2xl font-bold text-foreground">Team & Performance</h1>
           <p className="text-sm text-muted-foreground">
             {getDeptName(session?.user?.department ?? null)}
           </p>
         </div>
-        {isManagerPlus && (
-          <Button
-            className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
-            onClick={() => setShowAddEmployee(true)}
-          >
-            <UserPlus className="w-4 h-4 mr-1" />
-            Add Employee
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+            <button
+              onClick={() => setActiveTab("team")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                activeTab === "team"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Team
+            </button>
+            <button
+              onClick={() => setActiveTab("performance")}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                activeTab === "performance"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              Performance
+            </button>
+          </div>
+          {activeTab === "team" && isManagerPlus && (
+            <Button
+              className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
+              onClick={() => setShowAddEmployee(true)}
+            >
+              <UserPlus className="w-4 h-4 mr-1" />
+              Add Employee
+            </Button>
+          )}
+        </div>
       </div>
+
+      {activeTab === "performance" && (
+        <Suspense fallback={<div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>}>
+          <PerformancePage />
+        </Suspense>
+      )}
+
+      {activeTab === "team" && (
+      <>
 
       {/* Overview Cards */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -683,6 +722,8 @@ export default function TeamPage() {
           <CheckCircle2 className="w-4 h-4" />
           <span className="text-sm font-medium">{toast}</span>
         </div>
+      )}
+      </>
       )}
     </div>
   );

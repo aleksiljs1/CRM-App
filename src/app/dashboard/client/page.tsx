@@ -144,8 +144,23 @@ export default async function ClientDashboardPage() {
       missingDocs: missingDocs.map((d) => d.documentName),
       submissionId: sub?.id ?? null,
       status: sub?.status ?? null,
+      requiredDocuments: requiredDocs.map((d) => ({
+        id: d.id,
+        documentName: d.documentName,
+        description: d.description,
+        isMandatory: d.isMandatory,
+      })),
     };
   });
+
+  // Build action items from missing required docs across incomplete submissions
+  const actionItems = processStatusData.flatMap((proc) =>
+    proc.missingDocs.map((docName) => ({
+      id: `${proc.id}-${docName}`,
+      requiredDocName: docName,
+      processTypeName: proc.name,
+    }))
+  );
 
   // Derived metrics — all from real data, no demo numbers
   const activeSubmissions = submissions.filter(
