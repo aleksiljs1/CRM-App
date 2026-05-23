@@ -459,6 +459,9 @@ function TaskDetailModal({
 }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [reviewerLoading, setReviewerLoading] = useState(false);
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [progressNote, setProgressNote] = useState("");
+  const [progressing, setProgressing] = useState(false);
 
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
   const isManagerPlusRole = ["ADMIN", "PARTNER", "MANAGER"].includes(userRole);
@@ -498,6 +501,31 @@ function TaskDetailModal({
       fetchTeam();
     }
   }, [canAssignReviewer]);
+
+  async function handleProgressConfirm() {
+    if (!finalNextStatus) return;
+    setProgressing(true);
+    try {
+      const trimmed = progressNote.trim();
+      if (trimmed) {
+        // Optional: post the description as a team comment, prefixed with the
+        // status transition for context. Don't block the status change if it
+        // fails — show a toast.
+        try {
+          await axios.post(`/api/tasks/${task.id}/comments`, {
+            body: `Progress note · ${STATUS_CONFIG[task.status]?.label ?? task.status} → ${STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}\n\n${trimmed}`,
+          });
+        } catch {
+          toast.error("Couldn't save your note as a comment. Moving the task anyway.");
+        }
+      }
+      onStatusChange(task.id, finalNextStatus);
+      setProgressDialogOpen(false);
+      setProgressNote("");
+    } finally {
+      setProgressing(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -657,7 +685,7 @@ function TaskDetailModal({
             {finalNextStatus && (
               <Button
                 className="bg-brand-600 hover:bg-brand-700 text-white"
-                onClick={() => onStatusChange(task.id, finalNextStatus)}
+                onClick={() => setProgressDialogOpen(true)}
               >
                 <ArrowRight className="w-4 h-4 mr-1" />
                 Move to {STATUS_CONFIG[finalNextStatus]?.label}
@@ -691,6 +719,87 @@ function TaskDetailModal({
           <CommentsSection taskId={task.id} />
         </div>
       </div>
+
+      {/* Progress dialog — opens when the user clicks "Move to …" */}
+      {progressDialogOpen && finalNextStatus && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
+            {/* Header */}
+            <div className="border-b border-border px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-brand-100/70 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                  <ArrowRight className="size-4" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Progress this task
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Moving to{" "}
+                    <span className="font-medium text-foreground">
+                      {STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="space-y-2 px-6 py-5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                Describe the work you did
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  optional
+                </span>
+              </label>
+              <Textarea
+                value={progressNote}
+                onChange={(e) => setProgressNote(e.target.value)}
+                placeholder="Briefly describe what you completed before progressing the task…"
+                className="min-h-[110px] resize-none text-sm"
+                disabled={progressing}
+                autoFocus
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    handleProgressConfirm();
+                  }
+                }}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                If you write something, it&apos;ll be posted as a team comment
+                on this task. Leave it blank to just move the task.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 border-t border-border px-6 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setProgressDialogOpen(false);
+                  setProgressNote("");
+                }}
+                disabled={progressing}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleProgressConfirm}
+                disabled={progressing}
+                className="gap-1.5 bg-brand-600 text-white hover:bg-brand-700"
+              >
+                <ArrowRight className="size-3.5" />
+                {progressing
+                  ? "Saving…"
+                  : `Move to ${STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

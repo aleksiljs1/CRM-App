@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Mail,
   CheckSquare,
+  CalendarDays,
   FileText,
   MessageSquare,
   Users,
@@ -43,6 +44,12 @@ const navItems: NavItem[] = [
     label: "Tasks",
     href: "/dashboard/hr/tasks",
     icon: CheckSquare,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
+  },
+  {
+    label: "Calendar",
+    href: "/dashboard/hr/calendar",
+    icon: CalendarDays,
     roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {

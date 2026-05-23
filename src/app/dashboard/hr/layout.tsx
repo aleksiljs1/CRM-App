@@ -23,6 +23,7 @@ const tabs = [
   { label: "Overview", href: "/dashboard/hr" },
   { label: "Emails", href: "/dashboard/hr/emails" },
   { label: "Tasks", href: "/dashboard/hr/tasks" },
+  { label: "Calendar", href: "/dashboard/hr/calendar" },
   { label: "Documents", href: "/dashboard/hr/documents" },
 ];
 
