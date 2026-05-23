@@ -100,7 +100,7 @@ export default function ReportsPage() {
       {/* ── Overview KPI strip ─────────────────────────────────────────── */}
       <section>
         <SectionLabel icon={Activity}>Overview</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
             <span className="flex size-9 items-center justify-center rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300">
               <BarChart3 className="size-4" />

@@ -965,6 +965,12 @@ function NewTaskForm({
   const [processes, setProcesses] = useState<ProcessTypeOption[]>([]);
   const [taskAttachments, setTaskAttachments] = useState<File[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  // Client linking: optional. If picked, the task shows up on that
+  // client's portal (LiveTaskProgress) automatically.
+  const [clientId, setClientId] = useState<string>("");
+  const [clientOptions, setClientOptions] = useState<
+    { id: string; companyName: string; contactName: string }[]
+  >([]);
   const [submitting, setSubmitting] = useState(false);
   const [aiAssigning, setAiAssigning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -990,6 +996,26 @@ function NewTaskForm({
       }
       fetchProcesses();
     }
+    // Load this manager's clients for the optional picker. /api/clients is
+    // already dept-scoped server-side (admin/partner see all, manager sees
+    // their dept) so no filtering needed here.
+    async function fetchClients() {
+      try {
+        const res = await axios.get("/api/clients");
+        setClientOptions(
+          (res.data.clients || []).map(
+            (c: { id: string; companyName: string; contactName: string }) => ({
+              id: c.id,
+              companyName: c.companyName,
+              contactName: c.contactName,
+            })
+          )
+        );
+      } catch {
+        setClientOptions([]);
+      }
+    }
+    fetchClients();
   }, [showProcessLink]);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1050,6 +1076,9 @@ function NewTaskForm({
       formData.append("priority", priority);
       if (deadline) formData.append("deadline", deadline);
       formData.append("assignedToId", assignToId);
+      if (clientId) {
+        formData.append("clientId", clientId);
+      }
       if (processTypeId) {
         formData.append("processTypeId", processTypeId);
       }
@@ -1110,6 +1139,31 @@ function NewTaskForm({
                 placeholder="Describe the task..."
                 rows={3}
               />
+            </div>
+
+            {/* Client (optional) — picking a client surfaces the task on
+                their portal automatically. Leave blank for internal tasks. */}
+            <div>
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                Client <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <select
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              >
+                <option value="">No client (internal task)</option>
+                {clientOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.companyName} — {c.contactName}
+                  </option>
+                ))}
+              </select>
+              {clientId && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  This task will appear on the client&apos;s portal in real time.
+                </p>
+              )}
             </div>
 
             {/* Link Process (LEGAL dept / ADMIN only) */}
