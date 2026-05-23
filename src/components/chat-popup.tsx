@@ -400,7 +400,7 @@ export function ChatPopup() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#00968a] text-white shadow-lg transition-transform hover:scale-105 hover:bg-[#007d73] active:scale-95"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-brand-700 active:scale-95"
       >
         <MessageSquare className="h-6 w-6" />
         {unreadCount > 0 && (
@@ -412,14 +412,14 @@ export function ChatPopup() {
 
       {/* Popup panel */}
       <div
-        className={`fixed bottom-24 right-6 z-50 flex flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl transition-all duration-300 ${
+        className={`fixed bottom-24 right-6 z-50 flex flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl transition-all duration-300 ${
           isOpen
             ? "h-[500px] w-[350px] opacity-100 scale-100"
             : "h-0 w-0 opacity-0 scale-95 pointer-events-none"
         }`}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b bg-[#00968a] px-4 py-3 text-white">
+        <div className="flex shrink-0 items-center justify-between border-b bg-brand-600 px-4 py-3 text-white">
           {view === "chat" && activeChatUser ? (
             <div className="flex items-center gap-2">
               <button onClick={goBack} className="hover:bg-white/20 rounded p-1">
@@ -459,7 +459,7 @@ export function ChatPopup() {
           <div className="flex-1 overflow-y-auto">
             {loadingConversations ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-[#00968a]" />
+                <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
               </div>
             ) : conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-center px-4">
@@ -478,8 +478,8 @@ export function ChatPopup() {
                     className="w-full border-b px-3 py-2.5 text-left transition-colors hover:bg-muted/50 last:border-b-0"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
-                        <span className="text-xs font-medium text-[#00968a]">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
+                        <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
                           {other?.name?.charAt(0)?.toUpperCase() || "?"}
                         </span>
                       </div>
@@ -528,7 +528,7 @@ export function ChatPopup() {
             <div className="flex-1 overflow-y-auto px-3 py-3">
               {loadingMessages ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#00968a]" />
+                  <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -550,7 +550,7 @@ export function ChatPopup() {
                         <div
                           className={`max-w-[80%] rounded-xl px-3 py-2 ${
                             isOwn
-                              ? "rounded-br-sm bg-[#00968a] text-white"
+                              ? "rounded-br-sm bg-brand-600 text-white"
                               : "rounded-bl-sm bg-muted"
                           }`}
                         >
@@ -571,7 +571,7 @@ export function ChatPopup() {
                                   className={`inline-flex items-center gap-1 px-2 py-1 border rounded text-[10px] ${
                                     isOwn
                                       ? "bg-white/20 border-white/30 text-white"
-                                      : "bg-white/80 border-gray-200"
+                                      : "bg-card/80 border-border"
                                   }`}
                                 >
                                   <FileText className="h-3 w-3" />
@@ -607,7 +607,7 @@ export function ChatPopup() {
                   {attachments.map((file, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-[10px]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-[10px]"
                     >
                       <Paperclip className="h-2.5 w-2.5" />
                       <span className="max-w-[80px] truncate">{file.name}</span>
@@ -617,7 +617,7 @@ export function ChatPopup() {
                             prev.filter((_, idx) => idx !== i)
                           )
                         }
-                        className="text-gray-400 hover:text-red-500 ml-0.5"
+                        className="text-muted-foreground hover:text-red-500 ml-0.5"
                       >
                         x
                       </button>
@@ -655,7 +655,7 @@ export function ChatPopup() {
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-[#00968a]/30"
+                  className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-brand-500/30"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
@@ -674,7 +674,7 @@ export function ChatPopup() {
                     sending ||
                     (!messageText.trim() && attachments.length === 0)
                   }
-                  className="shrink-0 rounded-lg bg-[#00968a] p-2 text-white disabled:opacity-50 hover:bg-[#007d73] transition-colors"
+                  className="shrink-0 rounded-lg bg-brand-600 p-2 text-white disabled:opacity-50 hover:bg-brand-700 transition-colors"
                 >
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

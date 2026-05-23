@@ -106,7 +106,7 @@ function getFileIcon(mimeType: string) {
     return <FileText className="h-3.5 w-3.5 text-blue-500" />;
   if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
     return <FileText className="h-3.5 w-3.5 text-green-500" />;
-  return <FileText className="h-3.5 w-3.5 text-gray-500" />;
+  return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
 function formatFileSize(bytes: number): string {
@@ -142,7 +142,7 @@ function MessagesSkeleton() {
         <div
           key={i}
           className={`animate-pulse rounded-xl p-4 ${
-            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-[#00968a]/20"
+            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-brand-200/60 dark:bg-brand-800/40"
           }`}
         >
           <div className="mb-2 h-3 w-24 rounded bg-muted-foreground/20" />
@@ -505,8 +505,8 @@ export default function ChatsPage() {
     <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00968a]/10">
-          <MessageSquare className="h-5 w-5 text-[#00968a]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
+          <MessageSquare className="h-5 w-5 text-brand-600 dark:text-brand-400" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Chats</h1>
@@ -529,7 +529,7 @@ export default function ChatsPage() {
                 value={searchInput}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 placeholder="Search..."
-                className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           </div>
@@ -540,7 +540,7 @@ export default function ChatsPage() {
               onClick={() => setActiveTab("recent")}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "recent"
-                  ? "border-b-2 border-[#00968a] text-[#00968a]"
+                  ? "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -551,7 +551,7 @@ export default function ChatsPage() {
               onClick={() => setActiveTab("people")}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "people"
-                  ? "border-b-2 border-[#00968a] text-[#00968a]"
+                  ? "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -596,15 +596,15 @@ export default function ChatsPage() {
                         onClick={() => openConversation(conv)}
                         className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
                           isSelected
-                            ? "bg-[#00968a]/8 border-l-2 border-l-[#00968a]"
+                            ? "bg-brand-100/70 dark:bg-brand-900/30 border-l-2 border-l-brand-500"
                             : "hover:bg-muted/50 border-l-2 border-l-transparent"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
-                                <span className="text-xs font-medium text-[#00968a]">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
+                                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
                                   {other?.name?.charAt(0)?.toUpperCase() || "?"}
                                 </span>
                               </div>
@@ -664,7 +664,7 @@ export default function ChatsPage() {
                   <select
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
-                    className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                    className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   >
                     {DEPARTMENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -693,8 +693,8 @@ export default function ChatsPage() {
                       className="group w-full border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
-                          <span className="text-xs font-medium text-[#00968a]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
+                          <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
                             {user.name?.charAt(0)?.toUpperCase() || "?"}
                           </span>
                         </div>
@@ -743,8 +743,8 @@ export default function ChatsPage() {
               {activeChatUser && (
                 <div className="shrink-0 border-b px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00968a]/10">
-                      <span className="text-sm font-medium text-[#00968a]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
+                      <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
                         {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}
                       </span>
                     </div>
@@ -764,7 +764,7 @@ export default function ChatsPage() {
                     </div>
                   </div>
                   {typingUser && (
-                    <p className="mt-1 text-xs text-[#00968a] italic animate-pulse">
+                    <p className="mt-1 text-xs text-brand-600 dark:text-brand-400 italic animate-pulse">
                       {typingUser} is typing...
                     </p>
                   )}
@@ -798,7 +798,7 @@ export default function ChatsPage() {
                           <div
                             className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                               isOwn
-                                ? "rounded-br-md bg-[#00968a] text-white"
+                                ? "rounded-br-md bg-brand-600 text-white"
                                 : "rounded-bl-md bg-muted"
                             }`}
                           >
@@ -831,7 +831,7 @@ export default function ChatsPage() {
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${
                                       isOwn
                                         ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
-                                        : "bg-white/80 border-gray-200 hover:bg-gray-50"
+                                        : "bg-card/80 border-border hover:bg-muted"
                                     }`}
                                   >
                                     {getFileIcon(att.mimeType)}
@@ -842,7 +842,7 @@ export default function ChatsPage() {
                                       className={
                                         isOwn
                                           ? "text-white/50"
-                                          : "text-gray-400"
+                                          : "text-muted-foreground"
                                       }
                                     >
                                       ({formatFileSize(att.fileSize)})
@@ -871,7 +871,7 @@ export default function ChatsPage() {
                   }}
                   placeholder="Type a message..."
                   rows={2}
-                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
@@ -884,7 +884,7 @@ export default function ChatsPage() {
                     {attachments.map((file, i) => (
                       <div
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded text-xs"
                       >
                         <Paperclip className="h-3 w-3" />
                         <span className="max-w-[120px] truncate">
@@ -896,7 +896,7 @@ export default function ChatsPage() {
                               prev.filter((_, idx) => idx !== i)
                             )
                           }
-                          className="text-gray-400 hover:text-red-500 ml-1"
+                          className="text-muted-foreground hover:text-red-500 ml-1"
                         >
                           x
                         </button>
@@ -936,7 +936,7 @@ export default function ChatsPage() {
                         sending ||
                         (!messageText.trim() && attachments.length === 0)
                       }
-                      className="gap-2 rounded-xl bg-[#00968a] px-5 py-3 text-white hover:bg-[#007d73]"
+                      className="gap-2 rounded-xl bg-brand-600 px-5 py-3 text-white hover:bg-brand-700"
                     >
                       {sending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

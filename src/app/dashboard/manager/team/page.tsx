@@ -56,23 +56,23 @@ function getDeptName(dept: string | null): string {
 }
 
 const roleBadgeColors: Record<string, string> = {
-  MANAGER: "bg-purple-100 text-purple-700 border-purple-200",
-  SENIOR: "bg-blue-100 text-blue-700 border-blue-200",
-  ASSOCIATE: "bg-teal-100 text-teal-700 border-teal-200",
-  JUNIOR: "bg-amber-100 text-amber-700 border-amber-200",
-  ASSISTANT: "bg-gray-100 text-gray-600 border-gray-200",
-  INTERN: "bg-gray-100 text-gray-600 border-gray-200",
-  ADMIN: "bg-red-100 text-red-700 border-red-200",
-  PARTNER: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  MANAGER: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800",
+  SENIOR: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800",
+  ASSOCIATE: "bg-brand-100/70 text-brand-700 border-brand-200 dark:bg-brand-900/40 dark:text-brand-300 dark:border-brand-800",
+  JUNIOR: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800",
+  ASSISTANT: "bg-muted text-muted-foreground border-border",
+  INTERN: "bg-muted text-muted-foreground border-border",
+  ADMIN: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800",
+  PARTNER: "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800",
 };
 
 const roleAvatarColors: Record<string, string> = {
   MANAGER: "bg-purple-500",
   SENIOR: "bg-blue-500",
-  ASSOCIATE: "bg-[#00968a]",
+  ASSOCIATE: "bg-brand-600",
   JUNIOR: "bg-amber-500",
-  ASSISTANT: "bg-gray-400",
-  INTERN: "bg-gray-400",
+  ASSISTANT: "bg-muted-foreground/70",
+  INTERN: "bg-muted-foreground/70",
   ADMIN: "bg-red-500",
   PARTNER: "bg-indigo-500",
 };
@@ -139,28 +139,28 @@ function AddEmployeeModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Add Employee</h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 hover:bg-muted rounded"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {formError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
               {formError}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Name *
               </label>
               <Input
@@ -172,7 +172,7 @@ function AddEmployeeModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Email *
               </label>
               <Input
@@ -185,7 +185,7 @@ function AddEmployeeModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Password *
               </label>
               <Input
@@ -198,13 +198,13 @@ function AddEmployeeModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               >
                 <option value="SENIOR">Senior</option>
                 <option value="ASSOCIATE">Associate</option>
@@ -215,7 +215,7 @@ function AddEmployeeModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Sub-role (optional)
               </label>
               <Input
@@ -223,19 +223,19 @@ function AddEmployeeModal({
                 onChange={(e) => setSubRole(e.target.value)}
                 placeholder="e.g. Senior Associate, Junior Auditor"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Display title that replaces the role label
               </p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Department
               </label>
-              <Badge className="bg-[#00968a]/10 text-[#00968a] border-[#00968a]/20 hover:bg-[#00968a]/10">
+              <Badge className="bg-brand-100/70 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border-brand-500/20 hover:bg-brand-100/70 dark:hover:bg-brand-900/40">
                 {getDeptName(department)}
               </Badge>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Auto-set to your department
               </p>
             </div>
@@ -248,7 +248,7 @@ function AddEmployeeModal({
             <Button
               type="submit"
               disabled={submitting || !name.trim() || !email.trim() || !password.trim()}
-              className="bg-[#00968a] hover:bg-[#007a70] text-white"
+              className="bg-brand-600 hover:bg-brand-700 text-white"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1" />
@@ -298,7 +298,7 @@ export default function TeamPage() {
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#00968a]" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600 dark:text-brand-400" />
       </div>
     );
   }
@@ -331,14 +331,14 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Team</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">My Team</h1>
+          <p className="text-sm text-muted-foreground">
             {getDeptName(session?.user?.department ?? null)}
           </p>
         </div>
         {isManagerPlus && (
           <Button
-            className="bg-[#00968a] hover:bg-[#007a70] text-white"
+            className="bg-brand-600 hover:bg-brand-700 text-white"
             onClick={() => setShowAddEmployee(true)}
           >
             <UserPlus className="w-4 h-4 mr-1" />
@@ -351,47 +351,47 @@ export default function TeamPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00968a]/10">
-              <Users className="h-5 w-5 text-[#00968a]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
+              <Users className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{team.length}</p>
-              <p className="text-xs text-gray-500">Team Members</p>
+              <p className="text-xs text-muted-foreground">Team Members</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950">
+              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{avgCompletion}%</p>
-              <p className="text-xs text-gray-500">Avg Completion</p>
+              <p className="text-xs text-muted-foreground">Avg Completion</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-              <ClipboardList className="h-5 w-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
+              <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{totalOpenTasks}</p>
-              <p className="text-xs text-gray-500">Open Tasks</p>
+              <p className="text-xs text-muted-foreground">Open Tasks</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${totalOverdue > 0 ? "bg-red-50" : "bg-gray-50"}`}>
-              <AlertTriangle className={`h-5 w-5 ${totalOverdue > 0 ? "text-red-500" : "text-gray-400"}`} />
+            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${totalOverdue > 0 ? "bg-red-50 dark:bg-red-950" : "bg-muted/50"}`}>
+              <AlertTriangle className={`h-5 w-5 ${totalOverdue > 0 ? "text-red-500" : "text-muted-foreground"}`} />
             </div>
             <div>
-              <p className={`text-2xl font-bold ${totalOverdue > 0 ? "text-red-600" : ""}`}>
+              <p className={`text-2xl font-bold ${totalOverdue > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
                 {totalOverdue}
               </p>
-              <p className="text-xs text-gray-500">Overdue Tasks</p>
+              <p className="text-xs text-muted-foreground">Overdue Tasks</p>
             </div>
           </CardContent>
         </Card>
@@ -407,7 +407,7 @@ export default function TeamPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white text-sm font-semibold ${roleAvatarColors[user.role] || "bg-gray-400"}`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white text-sm font-semibold ${roleAvatarColors[user.role] || "bg-muted-foreground/70"}`}
                 >
                   {getInitials(user.name)}
                 </div>
@@ -415,7 +415,7 @@ export default function TeamPage() {
                   <CardTitle className="text-base font-semibold truncate">
                     {user.name}
                   </CardTitle>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   <Badge
                     variant="outline"
                     className={`mt-1 text-[10px] px-1.5 py-0 font-medium ${roleBadgeColors[user.role] || ""}`}
@@ -429,10 +429,10 @@ export default function TeamPage() {
               {/* Progress bar */}
               <div>
                 <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Completion Rate</span>
+                  <span className="text-muted-foreground">Completion Rate</span>
                   <span className="font-medium">{stats.completionRate}%</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-green-500 transition-all"
                     style={{ width: `${stats.completionRate}%` }}
@@ -443,25 +443,25 @@ export default function TeamPage() {
               {/* Stats grid */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Total</span>
+                  <span className="text-muted-foreground">Total</span>
                   <span className="font-medium">{stats.totalTasks}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Completed</span>
-                  <span className="font-medium text-green-600">
+                  <span className="text-muted-foreground">Completed</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
                     {stats.completedTasks}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">In Progress</span>
-                  <span className="font-medium text-blue-600">
+                  <span className="text-muted-foreground">In Progress</span>
+                  <span className="font-medium text-blue-600 dark:text-blue-400">
                     {stats.inProgressTasks}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Overdue</span>
+                  <span className="text-muted-foreground">Overdue</span>
                   <span
-                    className={`font-medium ${stats.overdueTasks > 0 ? "text-red-600" : "text-gray-400"}`}
+                    className={`font-medium ${stats.overdueTasks > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}
                   >
                     {stats.overdueTasks}
                   </span>
@@ -470,7 +470,7 @@ export default function TeamPage() {
 
               {/* Emails + action */}
               <div className="flex items-center justify-between border-t pt-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Mail className="h-3.5 w-3.5" />
                   <span>{stats.emailsHandled} emails sent</span>
                 </div>
@@ -478,7 +478,7 @@ export default function TeamPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs text-[#00968a] hover:text-[#00968a] hover:bg-[#00968a]/10"
+                    className="h-7 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-100/70 dark:hover:bg-brand-900/40"
                   >
                     View Tasks
                     <ExternalLink className="ml-1 h-3 w-3" />
@@ -491,7 +491,7 @@ export default function TeamPage() {
       </div>
 
       {team.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <Users className="mb-3 h-12 w-12" />
           <p className="text-lg font-medium">No team members found</p>
           <p className="text-sm">
@@ -515,7 +515,7 @@ export default function TeamPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#00968a] text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 right-6 z-50 bg-brand-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-bottom-5">
           <CheckCircle2 className="w-4 h-4" />
           <span className="text-sm font-medium">{toast}</span>
         </div>

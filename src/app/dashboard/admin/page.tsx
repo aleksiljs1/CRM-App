@@ -128,7 +128,7 @@ function QuickAction({
       href={href}
       className="group flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -252,29 +252,29 @@ export default async function AdminDashboardPage() {
         <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <SmallStat
             icon={Mail}
-            iconBg="bg-cyan-100"
-            iconText="text-cyan-700"
+            iconBg="bg-cyan-100 dark:bg-cyan-900/40"
+            iconText="text-cyan-700 dark:text-cyan-300"
             value={totalEmails.toString()}
             label="Total emails"
           />
           <SmallStat
             icon={CheckCircle2}
-            iconBg="bg-amber-100"
-            iconText="text-amber-700"
+            iconBg="bg-amber-100 dark:bg-amber-900/40"
+            iconText="text-amber-700 dark:text-amber-300"
             value={`${activePct}%`}
             label="Active users"
           />
           <SmallStat
             icon={Gauge}
-            iconBg="bg-emerald-100"
-            iconText="text-emerald-700"
+            iconBg="bg-emerald-100 dark:bg-emerald-900/40"
+            iconText="text-emerald-700 dark:text-emerald-300"
             value="On track" /* demo */
             label="System health"
           />
           <SmallStat
             icon={ShieldCheck}
-            iconBg="bg-violet-100"
-            iconText="text-violet-700"
+            iconBg="bg-violet-100 dark:bg-violet-900/40"
+            iconText="text-violet-700 dark:text-violet-300"
             value={inactiveUsers.toString()}
             label="Inactive users"
           />
@@ -295,7 +295,7 @@ export default async function AdminDashboardPage() {
                   Last 14 days
                 </p>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                 ↑ 12%
               </span>
             </div>
@@ -314,7 +314,7 @@ export default async function AdminDashboardPage() {
                   Last 14 days
                 </p>
               </div>
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
                 ↑ 8%
               </span>
             </div>

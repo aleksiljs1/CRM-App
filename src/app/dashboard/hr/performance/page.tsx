@@ -283,7 +283,7 @@ export default function MyPerformancePage() {
   if (error && !data) {
     return (
       <div className="flex items-center justify-center py-24">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-500 dark:text-red-400">{error}</p>
       </div>
     );
   }
@@ -365,7 +365,7 @@ export default function MyPerformancePage() {
 
             {/* Role + department chips */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700">
+              <span className="inline-flex items-center rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-300">
                 {perf.user.role}
               </span>
               {perf.user.department && (
@@ -396,7 +396,7 @@ export default function MyPerformancePage() {
             >
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
                     <metric.icon className="size-5" />
                   </span>
                   <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -420,7 +420,7 @@ export default function MyPerformancePage() {
       <Card className="overflow-hidden rounded-2xl border shadow-sm">
         {/* Gradient header strip */}
         <div className="flex items-center gap-3 border-b bg-gradient-to-r from-brand-50/60 via-background to-background px-6 py-4">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 shadow-xs">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 shadow-xs dark:bg-brand-900/40 dark:text-brand-300">
             <Sparkles className="size-4" />
           </span>
           <div>
@@ -436,7 +436,7 @@ export default function MyPerformancePage() {
         <CardContent className="p-6">
           {!tips && !tipsLoading && (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 shadow-xs">
+              <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 shadow-xs dark:bg-brand-950/50 dark:text-brand-300">
                 <Sparkles className="size-5" />
               </span>
               <p className="mt-4 max-w-md text-sm text-muted-foreground">
@@ -472,7 +472,7 @@ export default function MyPerformancePage() {
                       key={i}
                       className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
                     >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
                         <CheckCircle className="size-3.5" />
                       </span>
                       <span className="text-sm text-foreground">{s}</span>
@@ -492,7 +492,7 @@ export default function MyPerformancePage() {
                       key={i}
                       className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
                     >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                         <ArrowUpRight className="size-3.5" />
                       </span>
                       <span className="text-sm text-foreground">{tip}</span>
@@ -508,7 +508,7 @@ export default function MyPerformancePage() {
                     <Target className="size-4" />
                   </span>
                   <div>
-                    <h4 className="text-sm font-semibold text-brand-800">
+                    <h4 className="text-sm font-semibold text-brand-800 dark:text-brand-200">
                       Next goal
                     </h4>
                     <p className="mt-1 text-sm leading-relaxed text-foreground/85">
@@ -519,7 +519,7 @@ export default function MyPerformancePage() {
               </div>
 
               {/* Motivation quote */}
-              <p className="mx-auto max-w-xl text-center text-sm italic leading-relaxed text-brand-700">
+              <p className="mx-auto max-w-xl text-center text-sm italic leading-relaxed text-brand-700 dark:text-brand-300">
                 &ldquo;{tips.motivation}&rdquo;
               </p>
 

@@ -33,23 +33,24 @@ export function TasksByDepartmentChart({
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 12, fill: "#6b7280" }}
-          axisLine={{ stroke: "#d1d5db" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+          axisLine={{ stroke: "var(--border)" }}
         />
         <YAxis
-          tick={{ fontSize: 12, fill: "#6b7280" }}
-          axisLine={{ stroke: "#d1d5db" }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+          axisLine={{ stroke: "var(--border)" }}
           allowDecimals={false}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: "#fff",
-            border: "1px solid #e5e7eb",
+            backgroundColor: "var(--color-bg-card, var(--background))",
+            border: "1px solid var(--border)",
             borderRadius: "8px",
             fontSize: "13px",
+            color: "var(--foreground)",
           }}
         />
         <Bar dataKey="tasks" fill="#00968a" radius={[4, 4, 0, 0]} />
@@ -75,7 +76,7 @@ export function ClientPipelineChart({
           paddingAngle={4}
           dataKey="value"
           label={({ name, value }) => `${name}: ${value}`}
-          labelLine={{ stroke: "#9ca3af" }}
+          labelLine={{ stroke: "var(--muted-foreground)" }}
         >
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -83,15 +84,16 @@ export function ClientPipelineChart({
         </Pie>
         <Tooltip
           contentStyle={{
-            backgroundColor: "#fff",
-            border: "1px solid #e5e7eb",
+            backgroundColor: "var(--color-bg-card, var(--background))",
+            border: "1px solid var(--border)",
             borderRadius: "8px",
             fontSize: "13px",
+            color: "var(--foreground)",
           }}
         />
         <Legend
           formatter={(value: string) => (
-            <span style={{ color: "#374151", fontSize: "13px" }}>{value}</span>
+            <span style={{ color: "var(--foreground)", fontSize: "13px" }}>{value}</span>
           )}
         />
       </PieChart>

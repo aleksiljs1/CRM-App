@@ -56,10 +56,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#00968a]/10 via-white to-[#00968a]/5">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-100/70 via-background to-brand-50 dark:from-brand-900/30 dark:via-background dark:to-brand-950/30">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#00968a]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600">
             <span className="text-2xl font-bold text-white">K</span>
           </div>
           <CardTitle className="text-2xl font-bold">Kreston CRM</CardTitle>
@@ -100,7 +100,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#00968a] hover:bg-[#007a70] text-white"
+              className="w-full bg-brand-600 hover:bg-brand-700 text-white"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}

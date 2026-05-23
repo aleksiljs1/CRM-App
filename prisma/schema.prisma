@@ -95,6 +95,7 @@ model User {
   notifications    Notification[]
   conversations    ConversationParticipant[]
   sentMessages     Message[] @relation("SentMessages")
+  taskComments     TaskComment[] @relation("TaskCommentAuthor")
 
   @@index([email])
   @@index([role])
@@ -244,6 +245,7 @@ model Task {
   client         Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
   attachments    TaskAttachment[]
   statusHistory  TaskStatusHistory[]
+  comments       TaskComment[]
 
   @@index([assignedToId])
   @@index([createdById])
@@ -392,4 +394,21 @@ model MessageAttachment {
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+}
+
+// ─── Task Comments (Trello-style) ────────────────────────────────────────────
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+
+  @@index([taskId])
+  @@index([authorId])
+  @@index([createdAt])
 }

@@ -65,7 +65,7 @@ export default function ManagerSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-[#00968a]" />
+        <Loader2 className="h-6 w-6 animate-spin text-brand-600 dark:text-brand-400" />
       </div>
     );
   }
@@ -82,7 +82,7 @@ export default function ManagerSettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Clock className="h-5 w-5 text-[#00968a]" />
+            <Clock className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             Review Auto-Assignment
           </CardTitle>
         </CardHeader>
@@ -104,7 +104,7 @@ export default function ManagerSettingsPage() {
                 max={168}
                 value={autoAssignHours}
                 onChange={(e) => setAutoAssignHours(Math.max(1, Math.min(168, parseInt(e.target.value) || 1)))}
-                className="w-20 h-9 rounded-lg border bg-background px-3 text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                className="w-20 h-9 rounded-lg border bg-background px-3 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
               <span className="text-sm text-muted-foreground">hours</span>
             </div>
@@ -121,7 +121,7 @@ export default function ManagerSettingsPage() {
                     onClick={() => setAutoAssignHours(h)}
                     className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                       autoAssignHours === h
-                        ? "bg-[#00968a] text-white"
+                        ? "bg-brand-600 text-white"
                         : "bg-background border hover:bg-muted"
                     }`}
                   >
@@ -141,7 +141,7 @@ export default function ManagerSettingsPage() {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#00968a] hover:bg-[#007a70] text-white"
+            className="bg-brand-600 hover:bg-brand-700 text-white"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />

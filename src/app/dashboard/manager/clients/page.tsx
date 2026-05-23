@@ -55,29 +55,29 @@ function ClientCard({ client }: { client: ClientData }) {
   const lastEmail = client.emails[0];
 
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="mb-2 flex items-start justify-between">
-        <h4 className="text-sm font-semibold text-gray-900 leading-tight">
+        <h4 className="text-sm font-semibold text-foreground leading-tight">
           {client.companyName}
         </h4>
         {client.industry && (
-          <span className="ml-2 inline-flex shrink-0 items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+          <span className="ml-2 inline-flex shrink-0 items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             {client.industry}
           </span>
         )}
       </div>
 
-      <p className="text-xs text-gray-600">{client.contactName}</p>
-      <p className="mb-3 text-xs text-gray-400">{client.contactEmail}</p>
+      <p className="text-xs text-muted-foreground">{client.contactName}</p>
+      <p className="mb-3 text-xs text-muted-foreground">{client.contactEmail}</p>
 
-      <div className="mb-3 flex items-center gap-1 text-xs text-gray-500">
+      <div className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
         <Building2 className="h-3 w-3" />
         <span>
           {client.assignedTo ? client.assignedTo.name : "Unassigned"}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1" title="Active tasks">
           <CheckSquare className="h-3 w-3" />
           {activeTasks}
@@ -94,7 +94,7 @@ function ClientCard({ client }: { client: ClientData }) {
         )}
       </div>
 
-      <div className="mt-3 border-t pt-2 text-[10px] text-gray-400 flex items-center gap-1">
+      <div className="mt-3 border-t pt-2 text-[10px] text-muted-foreground flex items-center gap-1">
         <Clock className="h-2.5 w-2.5" />
         Created {timeAgo(client.createdAt)}
       </div>
@@ -107,28 +107,28 @@ const COLUMNS = [
     status: "LEAD" as const,
     label: "Leads",
     borderColor: "border-t-amber-500",
-    bgColor: "bg-amber-50",
-    textColor: "text-amber-700",
+    bgColor: "bg-amber-50 dark:bg-amber-950",
+    textColor: "text-amber-700 dark:text-amber-300",
     icon: Users,
     cardBg: "bg-amber-500",
   },
   {
     status: "ACTIVE" as const,
     label: "Active",
-    borderColor: "border-t-[#00968a]",
-    bgColor: "bg-teal-50",
-    textColor: "text-[#00968a]",
+    borderColor: "border-t-brand-500",
+    bgColor: "bg-brand-50 dark:bg-brand-950/40",
+    textColor: "text-brand-700 dark:text-brand-300",
     icon: UserCheck,
-    cardBg: "bg-[#00968a]",
+    cardBg: "bg-brand-600",
   },
   {
     status: "INACTIVE" as const,
     label: "Inactive",
-    borderColor: "border-t-gray-400",
-    bgColor: "bg-gray-50",
-    textColor: "text-gray-600",
+    borderColor: "border-t-muted-foreground/50",
+    bgColor: "bg-muted/50",
+    textColor: "text-muted-foreground",
     icon: UserX,
-    cardBg: "bg-gray-500",
+    cardBg: "bg-muted-foreground/70",
   },
 ];
 
@@ -175,7 +175,7 @@ export default function ClientPipelinePage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-gray-500">Loading client pipeline...</div>
+        <div className="text-sm text-muted-foreground">Loading client pipeline...</div>
       </div>
     );
   }
@@ -184,8 +184,8 @@ export default function ClientPipelinePage() {
     <div className="flex h-full flex-col gap-6 p-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Client Pipeline</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-foreground">Client Pipeline</h1>
+        <p className="text-sm text-muted-foreground">
           Track clients from first contact to active engagement
         </p>
       </div>
@@ -203,10 +203,10 @@ export default function ClientPipelinePage() {
                   <col.icon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-sm font-medium text-muted-foreground">
                     {col.label}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                  <p className="text-2xl font-bold text-foreground">{count}</p>
                 </div>
               </CardContent>
             </Card>
@@ -216,7 +216,7 @@ export default function ClientPipelinePage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search by company or contact name..."
           value={search}
@@ -232,7 +232,7 @@ export default function ClientPipelinePage() {
           return (
             <div
               key={col.status}
-              className={`flex flex-col rounded-lg border border-t-4 ${col.borderColor} bg-gray-50/50`}
+              className={`flex flex-col rounded-lg border border-t-4 ${col.borderColor} bg-muted/30`}
             >
               {/* Column header */}
               <div className="flex items-center justify-between px-4 py-3">
@@ -243,7 +243,7 @@ export default function ClientPipelinePage() {
                     {col.label}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-gray-400">
+                <span className="text-xs font-medium text-muted-foreground">
                   {items.length}
                 </span>
               </div>
@@ -251,7 +251,7 @@ export default function ClientPipelinePage() {
               {/* Column body */}
               <div className="flex-1 space-y-3 overflow-y-auto px-3 pb-3" style={{ maxHeight: "calc(100vh - 380px)" }}>
                 {items.length === 0 ? (
-                  <div className="flex items-center justify-center py-8 text-xs text-gray-400">
+                  <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
                     No clients
                   </div>
                 ) : (

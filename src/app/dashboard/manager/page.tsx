@@ -157,7 +157,7 @@ function QuickAction({
       href={href}
       className="group flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
@@ -364,10 +364,10 @@ export default async function ManagerDashboardPage() {
 
   // Priority badge colors
   const priorityColor: Record<string, string> = {
-    URGENT: "bg-red-100 text-red-700 border-red-200",
-    HIGH: "bg-orange-100 text-orange-700 border-orange-200",
-    MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    LOW: "bg-green-100 text-green-700 border-green-200",
+    URGENT: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-900",
+    HIGH: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-900",
+    MEDIUM: "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-900",
+    LOW: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-900",
   };
 
   const deptDisplayName = isAdmin ? "Firm-Wide" : getDeptName(department);
@@ -441,29 +441,29 @@ export default async function ManagerDashboardPage() {
         <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <SmallStat
             icon={ListChecks}
-            iconBg="bg-cyan-100"
-            iconText="text-cyan-700"
+            iconBg="bg-cyan-100 dark:bg-cyan-900/40"
+            iconText="text-cyan-700 dark:text-cyan-300"
             value={String(totalTasks)}
             label="Total tasks"
           />
           <SmallStat
             icon={CheckCircle2}
-            iconBg="bg-emerald-100"
-            iconText="text-emerald-700"
+            iconBg="bg-emerald-100 dark:bg-emerald-900/40"
+            iconText="text-emerald-700 dark:text-emerald-300"
             value={String(completedTasks)}
             label="Completed"
           />
           <SmallStat
             icon={Mail}
-            iconBg="bg-amber-100"
-            iconText="text-amber-700"
+            iconBg="bg-amber-100 dark:bg-amber-900/40"
+            iconText="text-amber-700 dark:text-amber-300"
             value={String(unreadEmails)}
             label="Unread emails"
           />
           <SmallStat
             icon={FileText}
-            iconBg="bg-violet-100"
-            iconText="text-violet-700"
+            iconBg="bg-violet-100 dark:bg-violet-900/40"
+            iconText="text-violet-700 dark:text-violet-300"
             value={String(pendingSubmissions)}
             label="Pending submissions"
           />
@@ -541,10 +541,10 @@ export default async function ManagerDashboardPage() {
                 {departmentWorkload.map((d) => {
                   const ratioColor =
                     d.ratio < 3
-                      ? "text-emerald-700 bg-emerald-50"
+                      ? "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950"
                       : d.ratio <= 5
-                        ? "text-amber-700 bg-amber-50"
-                        : "text-red-700 bg-red-50";
+                        ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950"
+                        : "text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-950";
                   return (
                     <li
                       key={d.dept}
@@ -680,8 +680,8 @@ export default async function ManagerDashboardPage() {
                   key={`email-${email.id}`}
                   className="flex items-start gap-4 px-5 py-3 transition-colors hover:bg-muted/40"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cyan-50">
-                    <Mail className="size-4 text-cyan-600" />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cyan-50 dark:bg-cyan-950">
+                    <Mail className="size-4 text-cyan-600 dark:text-cyan-300" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">
@@ -701,8 +701,8 @@ export default async function ManagerDashboardPage() {
                   key={`task-${task.id}`}
                   className="flex items-start gap-4 px-5 py-3 transition-colors hover:bg-muted/40"
                 >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-50">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950">
+                    <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-300" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">
