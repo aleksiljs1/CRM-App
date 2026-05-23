@@ -149,6 +149,12 @@ export default async function AdminDashboardPage() {
     redirect("/login");
   }
 
+  // Date range for chart data: last 14 days
+  const now = new Date();
+  const fourteenDaysAgo = new Date(now);
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  fourteenDaysAgo.setHours(0, 0, 0, 0);
+
   const [
     totalUsers,
     usersByRole,
@@ -157,6 +163,8 @@ export default async function AdminDashboardPage() {
     totalTasks,
     totalEmails,
     allUsers,
+    recentEmails,
+    recentCompletedTasks,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.groupBy({
@@ -181,7 +189,46 @@ export default async function AdminDashboardPage() {
         isActive: true,
       },
     }),
+    // Email volume per day for last 14 days
+    prisma.email.findMany({
+      where: { createdAt: { gte: fourteenDaysAgo } },
+      select: { createdAt: true },
+    }),
+    // Tasks completed per day for last 14 days
+    prisma.task.findMany({
+      where: { completedAt: { gte: fourteenDaysAgo, not: null } },
+      select: { completedAt: true },
+    }),
   ]);
+
+  // Build chart data: {day: "May 20", value: 5}[] for each of last 14 days
+  function buildDailyChart(
+    records: { createdAt?: Date; completedAt?: Date | null }[],
+    dateField: "createdAt" | "completedAt"
+  ) {
+    const dayCounts: Record<string, number> = {};
+    // Initialize all 14 days to 0
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      dayCounts[key] = 0;
+    }
+    // Count records per day
+    for (const rec of records) {
+      const dateVal = rec[dateField];
+      if (!dateVal) continue;
+      const d = new Date(dateVal);
+      const key = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (key in dayCounts) {
+        dayCounts[key]++;
+      }
+    }
+    return Object.entries(dayCounts).map(([day, value]) => ({ day, value }));
+  }
+
+  const emailChartData = buildDailyChart(recentEmails.map(e => ({ createdAt: e.createdAt })), "createdAt");
+  const taskChartData = buildDailyChart(recentCompletedTasks.map(t => ({ completedAt: t.completedAt })), "completedAt");
 
   // Derived metrics (no new Prisma queries — computed from existing data)
   const activeUsers = allUsers.filter((u) => u.isActive).length;
@@ -295,12 +342,9 @@ export default async function AdminDashboardPage() {
                   Last 14 days
                 </p>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                ↑ 12%
-              </span>
             </div>
             <div className="mt-4 -ml-2">
-              <EmailsAreaChart />
+              <EmailsAreaChart data={emailChartData} />
             </div>
           </div>
 
@@ -314,12 +358,9 @@ export default async function AdminDashboardPage() {
                   Last 14 days
                 </p>
               </div>
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                ↑ 8%
-              </span>
             </div>
             <div className="mt-4 -ml-2">
-              <TasksAreaChart />
+              <TasksAreaChart data={taskChartData} />
             </div>
           </div>
         </div>
@@ -330,13 +371,13 @@ export default async function AdminDashboardPage() {
         <SectionLabel icon={Zap}>Quick actions</SectionLabel>
         <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <QuickAction
-            href="/dashboard/admin"
+            href="/dashboard/admin/users"
             icon={Users}
             title="Manage Users"
             subtitle="View and edit team members"
           />
           <QuickAction
-            href="/dashboard/clients"
+            href="/dashboard/admin/clients"
             icon={Building2}
             title="All Clients"
             subtitle="Browse client accounts"
@@ -348,10 +389,10 @@ export default async function AdminDashboardPage() {
             subtitle="Firm-wide analytics"
           />
           <QuickAction
-            href="/dashboard/hr/tasks"
+            href="/dashboard/admin/tasks"
             icon={CheckSquare}
             title="Tasks"
-            subtitle="Track work across the firm"
+            subtitle="View tasks across all departments"
           />
         </div>
       </section>
