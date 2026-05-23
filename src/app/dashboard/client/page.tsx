@@ -10,7 +10,6 @@ import {
   Inbox,
   FolderOpen,
   CheckCircle2,
-  AlertCircle,
   FileText,
   type LucideIcon,
 } from "lucide-react";
@@ -18,7 +17,6 @@ import {
   LiveTaskProgress,
   type LiveTask,
 } from "@/components/client/live-task-progress";
-import { ActionItemsPanel } from "@/components/client/action-items-panel";
 import { ClientProcessesSection } from "@/components/client/client-processes";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -215,14 +213,6 @@ const displayName =
 
       {/* Overall progress headline + Your active work — both live-updating */}
       <LiveTaskProgress initialTasks={liveTasks} />
-
-      {/* What we need from you — unmatched required docs across INCOMPLETE
-          submissions. Slotted high so it's the first thing a returning client
-          sees after their progress ring. */}
-      <section>
-        <SectionLabel icon={AlertCircle}>What we need from you</SectionLabel>
-        <ActionItemsPanel items={actionItems} />
-      </section>
 
       {/* Processes — document requirements and upload status */}
       {processStatusData.length > 0 && (

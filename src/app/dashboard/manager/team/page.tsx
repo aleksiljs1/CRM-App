@@ -347,7 +347,7 @@ function TaskHistoryPanel({ userId }: { userId: string }) {
 
   return (
     <div className="border-t pt-3 mt-1">
-      <div className="flex items-center gap-1.5 mb-2">
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs text-muted-foreground font-medium">View Tasks:</span>
         <div className="flex rounded-md border border-border bg-muted/50 p-0.5">
@@ -492,16 +492,16 @@ export default function TeamPage() {
   const totalOverdue = team.reduce((sum, m) => sum + m.stats.overdueTasks, 0);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-3 md:p-6">
       {/* Header with tabs */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Team & Performance</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg md:text-2xl font-bold text-foreground">Team & Performance</h1>
           <p className="text-sm text-muted-foreground">
             {getDeptName(session?.user?.department ?? null)}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
             <button
               onClick={() => setActiveTab("team")}
@@ -528,7 +528,7 @@ export default function TeamPage() {
           </div>
           {activeTab === "team" && isManagerPlus && (
             <Button
-              className="bg-brand-600 hover:bg-brand-700 text-white"
+              className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
               onClick={() => setShowAddEmployee(true)}
             >
               <UserPlus className="w-4 h-4 mr-1" />
@@ -548,7 +548,7 @@ export default function TeamPage() {
       <>
 
       {/* Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">

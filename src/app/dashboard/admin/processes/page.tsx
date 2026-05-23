@@ -226,7 +226,7 @@ export default function ProcessManagementPage() {
   return (
     <div className="space-y-8 pb-10">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-stretch gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-300">
             Process Type Management
@@ -237,7 +237,7 @@ export default function ProcessManagementPage() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-700"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-700 md:w-auto md:justify-start"
         >
           <Plus className="h-4 w-4" />
           Add Process Type
@@ -301,7 +301,7 @@ export default function ProcessManagementPage() {
                     </div>
 
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      className={`hidden shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider md:inline-flex ${
                         p.isActive
                           ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
                           : "bg-muted text-muted-foreground"
@@ -310,7 +310,7 @@ export default function ProcessManagementPage() {
                       {p.isActive ? "Active" : "Inactive"}
                     </span>
 
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
                       {p._count.requiredDocuments} doc{p._count.requiredDocuments !== 1 ? "s" : ""}
                     </span>
 
@@ -397,7 +397,7 @@ export default function ProcessManagementPage() {
                               )}
                             </div>
                             <span
-                              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold md:inline-flex ${
                                 doc.source === "INTERNAL"
                                   ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
                                   : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
@@ -406,7 +406,7 @@ export default function ProcessManagementPage() {
                               {doc.source === "INTERNAL" ? "Internal" : "Client"}
                             </span>
                             <span
-                              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold md:inline-flex ${
                                 doc.isMandatory
                                   ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                                   : "bg-muted text-muted-foreground"

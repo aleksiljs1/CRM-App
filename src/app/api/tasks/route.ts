@@ -67,10 +67,10 @@ export async function GET(request: NextRequest) {
       orderBy: [{ priority: "desc" }, { deadline: "asc" }],
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true, subRole: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true, subRole: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -250,10 +250,10 @@ export async function POST(request: NextRequest) {
       },
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true, subRole: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true, subRole: true },
+          select: { id: true, name: true, email: true, role: true, subRole: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -268,6 +268,20 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // ── Real-time: tell open task pages a new task exists ──
+    // Sockets must never break the API response — swallow any errors.
+    try {
+      const io = (globalThis as any).io;
+      if (io) {
+        if (task.department) {
+          io.to(`dept:${task.department}`).emit("task-created", { id: task.id });
+        }
+        io.to("firm:tasks").emit("task-created", { id: task.id });
+      }
+    } catch (socketError) {
+      console.error("Error emitting task-created event:", socketError);
+    }
 
     return Response.json({ task }, { status: 201 });
   } catch (error) {

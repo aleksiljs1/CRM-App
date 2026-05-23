@@ -31,10 +31,10 @@ export async function GET(
       where: { id },
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -276,10 +276,10 @@ export async function PATCH(
       data,
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -414,6 +414,22 @@ export async function PATCH(
       }
     }
 
+    // ── Real-time: broadcast to dept + firm rooms so open task pages refresh
+    // without a manual reload. Independent of the per-client emit above.
+    try {
+      const io = (globalThis as any).io;
+      if (io) {
+        if (updated.department) {
+          io.to(`dept:${updated.department}`).emit("task-updated", {
+            id: updated.id,
+          });
+        }
+        io.to("firm:tasks").emit("task-updated", { id: updated.id });
+      }
+    } catch (socketError) {
+      console.error("Error emitting task-updated event:", socketError);
+    }
+
     return Response.json({ task: updated });
   } catch (error) {
     console.error("Error updating task:", error);
@@ -453,6 +469,19 @@ export async function DELETE(
     }
 
     await prisma.task.delete({ where: { id } });
+
+    // ── Real-time: broadcast deletion so open task pages drop the card. ──
+    try {
+      const io = (globalThis as any).io;
+      if (io) {
+        if (task.department) {
+          io.to(`dept:${task.department}`).emit("task-deleted", { id });
+        }
+        io.to("firm:tasks").emit("task-deleted", { id });
+      }
+    } catch (socketError) {
+      console.error("Error emitting task-deleted event:", socketError);
+    }
 
     return Response.json({ success: true });
   } catch (error) {

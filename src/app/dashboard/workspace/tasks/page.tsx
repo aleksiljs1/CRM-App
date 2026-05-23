@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
+import { getSocket } from "@/lib/socket-client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ interface TaskUser {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
 }
 
 interface TaskClient {
@@ -305,13 +307,22 @@ function TaskCard({
           )}
           <span
             title={assigneeName}
-            className={`inline-flex size-6 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-[10px] font-semibold ${
+            className={`inline-flex size-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold ${
               task.status === "REVIEW" && !task.assignedTo
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                : ""
+                : "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
             }`}
           >
-            {assigneeInitials}
+            {task.assignedTo?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={task.assignedTo.avatar}
+                alt={assigneeName}
+                className="size-full object-cover"
+              />
+            ) : (
+              assigneeInitials
+            )}
           </span>
         </div>
       </div>
@@ -1365,6 +1376,25 @@ export default function HRTasksPage() {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // ── Real-time: subscribe to dept (+ firm if admin/partner) rooms so any
+  // task change made by another user shows up here without a page refresh.
+  useEffect(() => {
+    if (!role) return;
+    const socket = getSocket();
+    socket.emit("subscribe-tasks", { department: dept, role });
+    const onChange = () => {
+      fetchTasks();
+    };
+    socket.on("task-updated", onChange);
+    socket.on("task-created", onChange);
+    socket.on("task-deleted", onChange);
+    return () => {
+      socket.off("task-updated", onChange);
+      socket.off("task-created", onChange);
+      socket.off("task-deleted", onChange);
+    };
+  }, [dept, role, fetchTasks]);
 
   // Auto-assign check every 60 seconds (for managers)
   useEffect(() => {

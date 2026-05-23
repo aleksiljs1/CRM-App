@@ -19,6 +19,7 @@ import {
   Users,
   Clock,
   Download,
+  ArrowLeft,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -765,6 +766,18 @@ export default function ChatsPage() {
               {/* Conversation header */}
               {activeChatUser && (
                 <div className="shrink-0 border-b border-border bg-muted/20 px-4 md:px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveConvId(null);
+                      setActiveConv(null);
+                      activeConvRef.current = null;
+                    }}
+                    className="md:hidden mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Back to chats
+                  </button>
                   <div className="flex items-center gap-3">
                     <div className="flex size-10 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                       {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}

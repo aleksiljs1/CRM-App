@@ -325,7 +325,7 @@ export default function MyPerformancePage() {
       <section>
         <SectionLabel icon={Award}>Scorecard</SectionLabel>
         <Card className="relative mt-3 overflow-hidden rounded-xl border bg-card shadow-xs">
-        <CardContent className="relative grid grid-cols-1 items-center gap-8 p-8 md:grid-cols-[auto_1fr] md:gap-12 md:p-10">
+        <CardContent className="relative grid grid-cols-1 items-center gap-8 p-4 md:grid-cols-[auto_1fr] md:gap-12 md:p-10">
           <ScoreRing score={score} animatedScore={animatedScore} />
 
           <div className="space-y-5">
