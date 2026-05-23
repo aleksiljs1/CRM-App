@@ -14,9 +14,31 @@ import {
   Target,
   Loader2,
   Trophy,
+  Award,
+  Gauge,
+  type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
+// ─── Inline section primitives (matches /dashboard/hr/ pattern) ─────────────
+
+function SectionLabel({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="size-3 text-muted-foreground" />
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {children}
+      </span>
+    </div>
+  );
+}
 
 interface PerformanceData {
   user: {
@@ -305,20 +327,31 @@ export default function MyPerformancePage() {
   const rankWindow: number[] = [];
   for (let r = windowStart; r <= windowEnd; r++) rankWindow.push(r);
 
+  const deptDisplayName = perf.user.department
+    ? perf.user.department.replace(/_/g, " ")
+    : "Firm-Wide";
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Page header */}
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          My Performance
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Track your progress, spot trends, and find ways to grow.
-        </p>
-      </header>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            My Performance
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Your scorecard &middot; spot trends and find ways to grow
+          </p>
+        </div>
+        <span className="inline-flex items-center self-start rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300 md:self-auto">
+          {deptDisplayName}
+        </span>
+      </div>
 
       {/* Hero score card */}
-      <Card className="relative overflow-hidden rounded-2xl border bg-card shadow-sm">
+      <section>
+        <SectionLabel icon={Award}>Scorecard</SectionLabel>
+        <Card className="relative mt-3 overflow-hidden rounded-xl border bg-card shadow-xs">
         <CardContent className="relative grid grid-cols-1 items-center gap-8 p-8 md:grid-cols-[auto_1fr] md:gap-12 md:p-10">
           <ScoreRing score={score} animatedScore={animatedScore} />
 
@@ -377,22 +410,21 @@ export default function MyPerformancePage() {
           </div>
         </CardContent>
       </Card>
+      </section>
 
       {/* Score Breakdown */}
       <section>
-        <div className="mb-3 flex items-end justify-between">
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Score breakdown
-          </h2>
+        <div className="flex items-end justify-between">
+          <SectionLabel icon={Gauge}>Score breakdown</SectionLabel>
           <p className="text-xs text-muted-foreground">
             Inputs into your performance score
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3">
           {metricCards.map((metric) => (
             <Card
               key={metric.key}
-              className="group rounded-2xl border shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
+              className="group rounded-xl border bg-card shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
             >
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
@@ -417,7 +449,9 @@ export default function MyPerformancePage() {
       </section>
 
       {/* AI Coach */}
-      <Card className="overflow-hidden rounded-2xl border shadow-sm">
+      <section>
+        <SectionLabel icon={Sparkles}>AI Coach</SectionLabel>
+      <Card className="mt-3 overflow-hidden rounded-xl border bg-card shadow-xs">
         {/* Gradient header strip */}
         <div className="flex items-center gap-3 border-b bg-gradient-to-r from-brand-50/60 via-background to-background px-6 py-4">
           <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 shadow-xs dark:bg-brand-900/40 dark:text-brand-300">
@@ -539,6 +573,7 @@ export default function MyPerformancePage() {
           )}
         </CardContent>
       </Card>
+      </section>
     </div>
   );
 }

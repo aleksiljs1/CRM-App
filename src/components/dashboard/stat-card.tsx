@@ -21,7 +21,7 @@ export function StatCard({
   return (
     <Link
       href={href}
-      className="group block cursor-pointer rounded-xl border bg-card p-5 shadow-xs transition-colors hover:border-brand-300/60"
+      className="group block cursor-pointer rounded-xl border bg-card p-4 md:p-5 shadow-xs transition-colors hover:border-brand-300/60"
     >
       <div className="flex items-start justify-between">
         <span className="flex size-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
@@ -29,7 +29,7 @@ export function StatCard({
         </span>
         <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
-      <p className="mt-4 text-3xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-4 text-2xl md:text-3xl font-semibold tabular-nums">{value}</p>
       <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
         {label}
       </p>

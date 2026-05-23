@@ -276,7 +276,7 @@ export default async function ClientDashboardPage() {
                 return (
                   <li
                     key={sub.id}
-                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40"
+                    className="flex items-center gap-3 md:gap-4 px-3 md:px-5 py-3 transition-colors hover:bg-muted/40"
                   >
                     <span
                       className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${

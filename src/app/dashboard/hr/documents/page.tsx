@@ -27,7 +27,6 @@ import {
   Send,
   Paperclip,
   Wand2,
-  RefreshCw,
   Clock,
   MoreHorizontal,
 } from "lucide-react";
@@ -392,11 +391,6 @@ export default function HRDocumentsPage() {
     }
   }
 
-  // ─── Request update (no existing endpoint — toast only) ───────────────────
-  function handleRequestUpdate(doc: UnifiedDocument) {
-    toast.success(`Update request sent for "${doc.fileName}"`);
-  }
-
   const sourceTabs: { label: string; value: SourceFilter }[] = [
     { label: "All", value: "all" },
     { label: "Tasks", value: "task" },
@@ -639,14 +633,6 @@ export default function HRDocumentsPage() {
                   </button>
                 </>
               )}
-              <button
-                type="button"
-                onClick={() => handleRequestUpdate(featuredDoc)}
-                className={featuredPillCls}
-              >
-                <RefreshCw className="size-3.5" />
-                Request Update
-              </button>
             </div>
           </div>
 

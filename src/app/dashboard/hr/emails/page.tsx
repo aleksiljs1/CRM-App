@@ -20,6 +20,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Plus,
   X,
 } from "lucide-react";
@@ -333,7 +334,7 @@ export default function HREmailsPage() {
       setReplyText(data.enhanced);
       toast.success("Reply enhanced by AI");
     } catch {
-      toast.error("AI enhancement failed");
+      toast.error("AI Assist failed");
     } finally {
       setEnhancing(false);
     }
@@ -396,19 +397,14 @@ export default function HREmailsPage() {
     <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* ------ Header ------ */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
-            <Mail className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg md:text-2xl font-bold tracking-tight truncate">{deptDisplayName} Emails</h1>
-            <p className="text-sm text-muted-foreground">
-              {pagination.total} email{pagination.total !== 1 ? "s" : ""}
-              {filter !== "all" ? ` (${filter})` : ""}
-            </p>
-          </div>
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Emails
+          </h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            {deptDisplayName} inbox
+          </p>
         </div>
-
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Button
             onClick={() => setShowCompose(true)}
@@ -417,60 +413,72 @@ export default function HREmailsPage() {
             <Plus className="h-4 w-4" />
             Compose
           </Button>
+        </div>
+      </div>
+
+      {/* ------ Filter tabs + Search + AI prioritize ------ */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-muted/50 p-1">
+          {(["all", "unread", "read", "unreplied", "replied", ...(orderedIds.length > 0 ? ["ordered" as const] : [])] as const).map((f) => {
+            const isActive = filter === f;
+            const label =
+              f === "unreplied"
+                ? "Un-replied"
+                : f === "ordered"
+                ? "AI Ordered"
+                : f.charAt(0).toUpperCase() + f.slice(1);
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => {
+                  setFilter(f);
+                  setSelectedId(null);
+                }}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => handleSearchInput(e.target.value)}
+              placeholder="Search emails..."
+              className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+          </div>
           <Button
             variant="outline"
+            size="sm"
             onClick={handlePrioritize}
             disabled={prioritizing}
-            className="gap-2 flex-1 md:flex-none"
+            className="gap-2"
           >
             {prioritizing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             )}
-            {prioritizing ? "Analyzing..." : "Sort by Importance"}
+            {prioritizing ? "Analyzing..." : "Sort by importance"}
           </Button>
-        </div>
-      </div>
-
-      {/* ------ Filter tabs + Search ------ */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
-        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 overflow-x-auto">
-          {(["all", "unread", "read", "unreplied", "replied", ...(orderedIds.length > 0 ? ["ordered" as const] : [])] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => {
-                setFilter(f);
-                setSelectedId(null);
-              }}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${
-                filter === f
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {f === "unreplied" ? "Un-replied" : f === "ordered" ? "AI Ordered" : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full md:w-auto">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => handleSearchInput(e.target.value)}
-            placeholder="Search emails..."
-            className="h-9 w-full md:w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-          />
         </div>
       </div>
 
       {/* ------ Main split layout - INDEPENDENT scrolling ------ */}
       <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
         {/* ====== LEFT: Email list ====== */}
-        <Card className={`flex w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden ${selectedId ? "hidden md:flex" : "flex"}`}>
+        <Card className="flex w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden min-h-[300px] md:min-h-0">
           {loadingEmails ? (
             <EmailListSkeleton />
           ) : emails.length === 0 ? (
@@ -490,17 +498,28 @@ export default function HREmailsPage() {
                   const isSelected = email.id === selectedId;
                   const isUnread = email.isIncoming && !email.isRead;
                   const importance = email.aiImportance ?? 0;
+                  const needsReply = email.isIncoming && !email.isReplied;
+                  const accentClass =
+                    importance >= 70
+                      ? "bg-red-500 dark:bg-red-400"
+                      : needsReply
+                      ? "bg-brand-500"
+                      : "bg-transparent";
 
                   return (
                     <button
                       key={email.id}
                       onClick={() => setSelectedId(email.id)}
-                      className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
+                      className={`group relative w-full border-b px-4 py-3.5 pl-5 text-left transition-colors last:border-b-0 ${
                         isSelected
-                          ? "bg-brand-100/70 dark:bg-brand-900/30 border-l-2 border-l-brand-500"
-                          : "hover:bg-muted/50 border-l-2 border-l-transparent"
+                          ? "bg-brand-50/40 dark:bg-brand-950/30"
+                          : "hover:bg-muted/40"
                       }`}
                     >
+                      <span
+                        aria-hidden
+                        className={`pointer-events-none absolute left-1.5 top-2 bottom-2 w-[3px] rounded-full ${accentClass}`}
+                      />
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -600,7 +619,7 @@ export default function HREmailsPage() {
         </Card>
 
         {/* ====== RIGHT: Email detail & thread (INDEPENDENT scroll) ====== */}
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className={`flex flex-1 flex-col overflow-hidden min-h-[400px] md:min-h-0 ${!selectedId ? "hidden md:flex" : ""}`}>
           {!selectedId ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -617,11 +636,19 @@ export default function HREmailsPage() {
             <>
               {/* Detail header */}
               {selectedEmail && (
-                <div className="shrink-0 border-b px-6 py-4">
-                  <h2 className="text-lg font-semibold leading-tight">
+                <div className="shrink-0 border-b px-4 md:px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(null)}
+                    className="md:hidden mb-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    Back
+                  </button>
+                  <h2 className="text-lg font-semibold leading-tight break-words">
                     {selectedEmail.subject}
                   </h2>
-                  <div className="mt-1.5 flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="mt-1.5 flex flex-wrap md:flex-nowrap items-center gap-3 text-sm text-muted-foreground">
                     <span>From: {selectedEmail.senderName}</span>
                     <span className="text-muted-foreground/40">|</span>
                     <span>{selectedEmail.senderEmail}</span>
@@ -646,7 +673,7 @@ export default function HREmailsPage() {
               )}
 
               {/* Thread messages - scrollable independently */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
                 {loadingThread ? (
                   <ThreadSkeleton />
                 ) : thread.length === 0 ? (
@@ -732,12 +759,11 @@ export default function HREmailsPage() {
               </div>
 
               {/* Reply box - fixed at bottom */}
-              <div className="shrink-0 border-t bg-muted/20 px-6 py-4">
+              <div className="shrink-0 border-t bg-muted/20 px-4 md:px-6 py-4">
                 <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Write your reply..."
-                  rows={3}
                   rows={5}
                   className="w-full resize-y min-h-[120px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
@@ -787,7 +813,7 @@ export default function HREmailsPage() {
                     }
                   }}
                 />
-                <div className="flex items-center justify-between mt-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-3 md:flex-nowrap md:gap-0">
                   <Button
                     type="button"
                     variant="outline"
@@ -797,20 +823,20 @@ export default function HREmailsPage() {
                     <Paperclip className="h-4 w-4" />
                     Attach
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <Button
+                  <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
+                    <button
+                      type="button"
                       onClick={handleEnhance}
                       disabled={enhancing || !replyText.trim()}
-                      variant="outline"
-                      className="gap-2 rounded-xl text-sm border-brand-500 text-brand-600 dark:text-brand-400 hover:bg-brand-100/70 dark:hover:bg-brand-900/40"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-brand-200/60 dark:border-brand-800/50 bg-brand-50 dark:bg-brand-950/40 px-3 py-1.5 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {enhancing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <Sparkles className="h-4 w-4" />
+                        <Sparkles className="h-3.5 w-3.5" />
                       )}
-                      {enhancing ? "Enhancing..." : "Enhance with AI"}
-                    </Button>
+                      {enhancing ? "Enhancing..." : "AI Assist"}
+                    </button>
                     <Button
                       onClick={handleReply}
                       disabled={sendingReply || !replyText.trim()}

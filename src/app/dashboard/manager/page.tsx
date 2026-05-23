@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  TasksByDepartmentChart,
-  ClientPipelineChart,
+  TasksByTeamChart,
+  TasksByStatusChart,
 } from "@/components/dashboard-charts";
 import {
   Users,
@@ -197,8 +197,8 @@ export default async function ManagerDashboardPage() {
     completedTasks,
     unreadEmails,
     pendingSubmissions,
-    tasksByDept,
-    clientsByStatus,
+    openTasksByAssignee,
+    tasksByStatus,
     employeesByDept,
     openTasksByDept,
     recentEmails,
@@ -235,21 +235,23 @@ export default async function ManagerDashboardPage() {
     }),
 
     // Chart data
+    // (1) open tasks per assignee
     prisma.task.groupBy({
-      by: ["department"],
+      by: ["assignedToId"],
       _count: { id: true },
-      where: { department: { not: null }, ...taskDeptFilter },
+      where: {
+        status: { not: "COMPLETED" },
+        assignedToId: { not: null },
+        ...taskDeptFilter,
+      },
     }),
-    prisma.client.groupBy({
+    prisma.task.groupBy({
       by: ["status"],
       _count: { id: true },
-      ...(isAdmin
-        ? {}
-        : {
-            where: {
-              assignedTo: { department: (department || "HR") as string },
-            },
-          }),
+      where: {
+        status: { in: ["TODO", "IN_PROGRESS", "REVIEW", "APPROVED"] },
+        ...taskDeptFilter,
+      },
     }),
 
     // Department workload
@@ -325,22 +327,41 @@ export default async function ManagerDashboardPage() {
   const completionRate =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Transform chart data
-  const tasksByDeptChart = tasksByDept.map((item) => ({
-    name: DEPT_LABELS[item.department ?? ""] ?? item.department ?? "N/A",
-    tasks: item._count.id,
-  }));
+  // Resolve assignee names for the per-person task chart
+  const assigneeIds = openTasksByAssignee
+    .map((row) => row.assignedToId)
+    .filter((id): id is string => id !== null);
 
-  const clientPipelineChart = clientsByStatus.map((item) => ({
-    name: item.status,
-    value: item._count.id,
-    color:
-      item.status === "LEAD"
-        ? "#f59e0b"
-        : item.status === "ACTIVE"
-          ? "#00968a"
-          : "#94a3b8",
+  const assigneeUsers = assigneeIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: assigneeIds } },
+        select: { id: true, name: true },
+      })
+    : [];
+
+  const nameById = new Map(assigneeUsers.map((u) => [u.id, u.name]));
+
+  // Transform chart data
+  const tasksByTeamChart = openTasksByAssignee
+    .map((row) => ({
+      name: nameById.get(row.assignedToId!) ?? "Unassigned",
+      tasks: row._count.id,
+    }))
+    .sort((a, b) => b.tasks - a.tasks)
+    .slice(0, 12); // cap so the bar chart doesn't get crowded
+
+  const STATUS_ORDER = ["TODO", "IN_PROGRESS", "REVIEW", "APPROVED"] as const;
+  const statusCounts = new Map(
+    tasksByStatus.map((row) => [row.status, row._count.id])
+  );
+  const tasksByStatusChart = STATUS_ORDER.map((status) => ({
+    status,
+    count: statusCounts.get(status) ?? 0,
   }));
+  const totalOpenByStatus = tasksByStatusChart.reduce(
+    (sum, item) => sum + item.count,
+    0
+  );
 
   // Build department workload map
   const empMap = new Map<string, number>();
@@ -385,8 +406,8 @@ export default async function ManagerDashboardPage() {
     <div className="space-y-8">
       {/* Page title row */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-brand-700">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
             {deptDisplayName} Management Dashboard
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
@@ -396,12 +417,17 @@ export default async function ManagerDashboardPage() {
             &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/manager/team" className="w-full md:w-auto">
-          <Button className="w-full gap-2 md:w-auto">
-            <Users className="size-4" />
-            View Team
-          </Button>
-        </Link>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
+          <Link href="/dashboard/manager/team" className="w-full md:w-auto">
+            <Button className="w-full gap-2 md:w-auto bg-brand-600 hover:bg-brand-700 text-white">
+              <Users className="size-4" />
+              View Team
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ── Section 1 — Overview ─────────────────────────────────────── */}
@@ -477,18 +503,18 @@ export default async function ManagerDashboardPage() {
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Tasks by Department
+                Tasks by Team
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Open task distribution
+                Open tasks per team member
               </p>
             </div>
             <div className="mt-4">
-              {tasksByDeptChart.length > 0 ? (
-                <TasksByDepartmentChart data={tasksByDeptChart} />
+              {tasksByTeamChart.length > 0 ? (
+                <TasksByTeamChart data={tasksByTeamChart} />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">
-                  No task data available
+                  No open tasks assigned
                 </p>
               )}
             </div>
@@ -497,18 +523,21 @@ export default async function ManagerDashboardPage() {
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Client Pipeline
+                Tasks by Status
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Status breakdown across all clients
+                Where your team&apos;s work is right now
               </p>
             </div>
             <div className="mt-4">
-              {clientPipelineChart.length > 0 ? (
-                <ClientPipelineChart data={clientPipelineChart} />
+              {totalOpenByStatus > 0 ? (
+                <TasksByStatusChart
+                  data={tasksByStatusChart}
+                  total={totalOpenByStatus}
+                />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">
-                  No client data available
+                  No open tasks
                 </p>
               )}
             </div>
@@ -530,7 +559,8 @@ export default async function ManagerDashboardPage() {
           </div>
 
           {departmentWorkload.length > 0 ? (
-            <div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[480px]">
               <div className="grid grid-cols-4 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Department</span>
                 <span className="text-center">Staff</span>
@@ -570,6 +600,7 @@ export default async function ManagerDashboardPage() {
                   );
                 })}
               </ul>
+              </div>
             </div>
           ) : (
             <p className="py-10 text-center text-sm text-muted-foreground">
@@ -593,7 +624,8 @@ export default async function ManagerDashboardPage() {
 
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
           {upcomingDeadlines.length > 0 ? (
-            <div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[640px]">
               <div className="grid grid-cols-5 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span className="col-span-2">Task</span>
                 <span>Assigned to</span>
@@ -629,6 +661,7 @@ export default async function ManagerDashboardPage() {
                   </li>
                 ))}
               </ul>
+              </div>
             </div>
           ) : (
             <p className="py-10 text-center text-sm text-muted-foreground">

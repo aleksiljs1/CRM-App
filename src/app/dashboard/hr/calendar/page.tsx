@@ -290,7 +290,7 @@ export default function HRCalendarPage() {
   return (
     <div className="space-y-6">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             {calendarView === "personal" ? "My Calendar" : `${getDeptName(dept)} Team Calendar`}
@@ -299,12 +299,12 @@ export default function HRCalendarPage() {
             {calendarView === "personal" ? "Your tasks" : "All department tasks"} plotted by deadline &middot; {formatMonthYear(viewMonth)}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {isManagerPlus && (
             <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
               <button
                 onClick={() => setCalendarView("personal")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all sm:flex-none ${
                   calendarView === "personal"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -314,7 +314,7 @@ export default function HRCalendarPage() {
               </button>
               <button
                 onClick={() => setCalendarView("team")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all sm:flex-none ${
                   calendarView === "team"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -324,8 +324,8 @@ export default function HRCalendarPage() {
               </button>
             </div>
           )}
-          <Link href="/dashboard/hr/tasks">
-            <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700">
+          <Link href="/dashboard/hr/tasks" className="w-full sm:w-auto">
+            <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700 w-full sm:w-auto">
               <LayoutGrid className="size-4" />
               View Kanban
             </Button>
@@ -385,6 +385,8 @@ export default function HRCalendarPage() {
 
       {/* Calendar grid card */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+        <div className="min-w-[640px] md:min-w-0">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 border-b bg-muted/30">
           {WEEKDAYS.map((d) => (
@@ -492,6 +494,8 @@ export default function HRCalendarPage() {
             })}
           </div>
         )}
+        </div>
+        </div>
       </div>
 
       {/* Empty state — no tasks this month */}

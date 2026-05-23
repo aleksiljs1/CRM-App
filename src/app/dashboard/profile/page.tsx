@@ -204,7 +204,7 @@ export default function ProfilePage() {
   const deptLabel = getDeptLabel(user.department);
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div>
