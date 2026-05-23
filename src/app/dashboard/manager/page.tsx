@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   TasksByTeamChart,
-  ClientPipelineChart,
+  TasksByStatusChart,
 } from "@/components/dashboard-charts";
 import {
   Users,
@@ -198,7 +198,7 @@ export default async function ManagerDashboardPage() {
     unreadEmails,
     pendingSubmissions,
     openTasksByAssignee,
-    clientsByStatus,
+    tasksByStatus,
     employeesByDept,
     openTasksByDept,
     recentEmails,
@@ -245,16 +245,13 @@ export default async function ManagerDashboardPage() {
         ...taskDeptFilter,
       },
     }),
-    prisma.client.groupBy({
+    prisma.task.groupBy({
       by: ["status"],
       _count: { id: true },
-      ...(isAdmin
-        ? {}
-        : {
-            where: {
-              assignedTo: { department: (department || "HR") as string },
-            },
-          }),
+      where: {
+        status: { in: ["TODO", "IN_PROGRESS", "REVIEW", "APPROVED"] },
+        ...taskDeptFilter,
+      },
     }),
 
     // Department workload
@@ -353,23 +350,18 @@ export default async function ManagerDashboardPage() {
     .sort((a, b) => b.tasks - a.tasks)
     .slice(0, 12); // cap so the bar chart doesn't get crowded
 
-  const statusLabel: Record<string, string> = {
-    LEAD: "Lead",
-    PROSPECT: "Prospect",
-    ACTIVE: "Active",
-    CHURNED: "Churned",
-  };
-
-  const clientPipelineChart = clientsByStatus.map((item) => ({
-    name: statusLabel[item.status] ?? item.status,
-    value: item._count.id,
-    color:
-      item.status === "LEAD"
-        ? "#f59e0b"
-        : item.status === "ACTIVE"
-          ? "var(--color-brand-600)"
-          : "#94a3b8",
+  const STATUS_ORDER = ["TODO", "IN_PROGRESS", "REVIEW", "APPROVED"] as const;
+  const statusCounts = new Map(
+    tasksByStatus.map((row) => [row.status, row._count.id])
+  );
+  const tasksByStatusChart = STATUS_ORDER.map((status) => ({
+    status,
+    count: statusCounts.get(status) ?? 0,
   }));
+  const totalOpenByStatus = tasksByStatusChart.reduce(
+    (sum, item) => sum + item.count,
+    0
+  );
 
   // Build department workload map
   const empMap = new Map<string, number>();
@@ -531,18 +523,21 @@ export default async function ManagerDashboardPage() {
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Client Pipeline
+                Tasks by Status
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Status breakdown across all clients
+                Where your team&apos;s work is right now
               </p>
             </div>
             <div className="mt-4">
-              {clientPipelineChart.length > 0 ? (
-                <ClientPipelineChart data={clientPipelineChart} />
+              {totalOpenByStatus > 0 ? (
+                <TasksByStatusChart
+                  data={tasksByStatusChart}
+                  total={totalOpenByStatus}
+                />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">
-                  No client data available
+                  No open tasks
                 </p>
               )}
             </div>
