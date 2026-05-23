@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notify";
 
 /**
  * POST /api/tasks/auto-assign
@@ -111,15 +112,34 @@ export async function POST() {
       });
 
       // Create notification for the reviewer
-      await prisma.notification.create({
-        data: {
-          userId: bestReviewer.id,
-          title: "Review Auto-Assigned",
-          message: `Task "${task.title}" has been auto-assigned to you for review.`,
-          type: "TASK",
-          link: "/dashboard/hr/tasks",
-        },
+      await createNotification({
+        userId: bestReviewer.id,
+        title: "Review Auto-Assigned",
+        message: `'${task.title}' auto-assigned to you for review.`,
+        type: "TASK",
+        link: "/dashboard/hr/tasks",
       });
+
+      // Notify the department manager about the auto-assignment
+      if (dept) {
+        const deptManager = await prisma.user.findFirst({
+          where: {
+            department: dept,
+            role: "MANAGER",
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (deptManager) {
+          await createNotification({
+            userId: deptManager.id,
+            title: "Review Auto-Assigned",
+            message: `'${task.title}' auto-assigned to ${bestReviewer.name} for review.`,
+            type: "SYSTEM",
+            link: "/dashboard/hr/tasks",
+          });
+        }
+      }
 
       assigned.push({
         taskId: task.id,

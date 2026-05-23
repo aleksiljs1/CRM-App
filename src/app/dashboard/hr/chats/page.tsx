@@ -18,6 +18,7 @@ import {
   Loader2,
   Users,
   Clock,
+  Download,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +114,19 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+/** Deduplicate messages by id, keeping the non-temp version */
+function deduplicateMessages(msgs: ChatMessage[]): ChatMessage[] {
+  const map = new Map<string, ChatMessage>();
+  for (const msg of msgs) {
+    const existing = map.get(msg.id);
+    // Prefer non-temp messages over temp ones
+    if (!existing || existing.id.startsWith("temp-")) {
+      map.set(msg.id, msg);
+    }
+  }
+  return Array.from(map.values());
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +282,7 @@ export default function ChatsPage() {
         const { data } = await axios.get(
           `/api/chat/conversations/${convId}/messages`
         );
-        setMessages(data.messages);
+        setMessages(deduplicateMessages(data.messages));
         scrollToBottom();
       } catch {
         toast.error("Failed to load messages");
@@ -299,6 +313,7 @@ export default function ChatsPage() {
     if (!socketJoinedRef.current) {
       socket.emit("join", currentUserId);
       socketJoinedRef.current = true;
+      console.log("[ChatsPage] Joined user room:", currentUserId);
     }
 
     const handleNewMessage = (data: any) => {
@@ -317,7 +332,7 @@ export default function ChatsPage() {
             createdAt: data.createdAt,
             attachments: data.attachments || [],
           };
-          return [...prev, newMsg];
+          return deduplicateMessages([...prev, newMsg]);
         });
         scrollToBottom();
       }
@@ -436,9 +451,11 @@ export default function ChatsPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      // Replace optimistic message with real one
+      // Replace optimistic message with real one and deduplicate
       setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
+        deduplicateMessages(
+          prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
+        )
       );
       setAttachments([]);
       scrollToBottom();
@@ -786,7 +803,7 @@ export default function ChatsPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {messages.map((msg) => {
+                    {deduplicateMessages(messages).map((msg) => {
                       const isOwn = msg.senderId === currentUserId;
                       return (
                         <div
@@ -824,14 +841,12 @@ export default function ChatsPage() {
                             {msg.attachments && msg.attachments.length > 0 && (
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {msg.attachments.map((att) => (
-                                  <a
+                                  <div
                                     key={att.id}
-                                    href={att.filePath}
-                                    target="_blank"
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${
                                       isOwn
-                                        ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
-                                        : "bg-white/80 border-gray-200 hover:bg-gray-50"
+                                        ? "bg-white/20 border-white/30 text-white"
+                                        : "bg-white/80 border-gray-200"
                                     }`}
                                   >
                                     {getFileIcon(att.mimeType)}
@@ -840,14 +855,22 @@ export default function ChatsPage() {
                                     </span>
                                     <span
                                       className={
-                                        isOwn
-                                          ? "text-white/50"
-                                          : "text-gray-400"
+                                        isOwn ? "text-white/50" : "text-gray-400"
                                       }
                                     >
                                       ({formatFileSize(att.fileSize)})
                                     </span>
-                                  </a>
+                                    <a
+                                      href={`/api/attachments/${att.id}`}
+                                      download={att.fileName}
+                                      className={`ml-1 p-0.5 rounded hover:bg-black/10 ${
+                                        isOwn ? "text-white/70 hover:text-white" : "text-gray-500 hover:text-gray-700"
+                                      }`}
+                                      title="Download"
+                                    >
+                                      <Download className="h-3.5 w-3.5" />
+                                    </a>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -907,14 +930,14 @@ export default function ChatsPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
                   multiple
                   className="hidden"
                   onChange={(e) => {
-                    if (e.target.files) {
-                      setAttachments((prev) => [
-                        ...prev,
-                        ...Array.from(e.target.files!),
-                      ]);
+                    if (e.target.files && e.target.files.length > 0) {
+                      const newFiles = Array.from(e.target.files);
+                      setAttachments((prev) => [...prev, ...newFiles]);
+                      toast.success(`${newFiles.length} file(s) attached`);
                       e.target.value = "";
                     }
                   }}
@@ -927,7 +950,7 @@ export default function ChatsPage() {
                     className="gap-2 rounded-xl text-sm"
                   >
                     <Paperclip className="h-4 w-4" />
-                    Attach
+                    {attachments.length > 0 ? `${attachments.length} file(s)` : "Attach"}
                   </Button>
                   <div className="flex items-center gap-2">
                     <Button

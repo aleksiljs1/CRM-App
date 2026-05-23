@@ -30,10 +30,12 @@ app.prepare().then(() => {
 
     socket.on("join", (userId: string) => {
       socket.join(`user:${userId}`);
+      console.log(`[Socket.io] User ${userId} joined room user:${userId}`);
     });
 
     socket.on("join-conversation", (conversationId: string) => {
       socket.join(`conv:${conversationId}`);
+      console.log(`[Socket.io] Joined conversation room conv:${conversationId}`);
     });
 
     socket.on("leave-conversation", (conversationId: string) => {
