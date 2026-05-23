@@ -573,7 +573,7 @@ export function ChatPopup() {
           return (
             <div
               key={chat.conversationId}
-              className={`flex items-center gap-2 rounded-t-lg bg-[#00968a] px-3 py-2.5 text-white shadow-lg cursor-pointer select-none transition-all ${
+              className={`flex items-center gap-2 rounded-t-lg bg-brand-600 px-3 py-2.5 text-white shadow-lg cursor-pointer select-none transition-all ${
                 chat.flash ? "animate-pulse" : ""
               }`}
               style={{ width: 280, height: 44 }}
@@ -616,11 +616,11 @@ export function ChatPopup() {
         return (
           <div
             key={chat.conversationId}
-            className="flex flex-col overflow-hidden rounded-t-lg border bg-white shadow-2xl"
+            className="flex flex-col overflow-hidden rounded-t-lg border bg-card shadow-2xl"
             style={{ width: 340, height: 480 }}
           >
             {/* Header */}
-            <div className="flex shrink-0 items-center justify-between bg-[#00968a] px-3 py-2.5 text-white">
+            <div className="flex shrink-0 items-center justify-between bg-brand-600 px-3 py-2.5 text-white">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20">
                   <span className="text-xs font-medium">
@@ -660,7 +660,7 @@ export function ChatPopup() {
             <div className="flex-1 overflow-y-auto px-3 py-3">
               {chat.loadingMessages ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-[#00968a]" />
+                  <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
                 </div>
               ) : chat.messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -682,13 +682,13 @@ export function ChatPopup() {
                         <div
                           className={`max-w-[80%] rounded-xl px-3 py-2 ${
                             isOwn
-                              ? "rounded-br-sm bg-[#00968a] text-white"
-                              : "rounded-bl-sm bg-gray-100"
+                              ? "rounded-br-sm bg-brand-600 text-white"
+                              : "rounded-bl-sm bg-muted"
                           }`}
                         >
                           <p
                             className={`text-xs leading-relaxed whitespace-pre-wrap ${
-                              isOwn ? "text-white/95" : "text-gray-900"
+                              isOwn ? "text-white/95" : "text-foreground"
                             }`}
                           >
                             {msg.body}
@@ -701,7 +701,7 @@ export function ChatPopup() {
                                   className={`inline-flex items-center gap-1 px-2 py-1 border rounded text-[10px] ${
                                     isOwn
                                       ? "bg-white/20 border-white/30 text-white"
-                                      : "bg-white/80 border-gray-200"
+                                      : "bg-card/80 border-border"
                                   }`}
                                 >
                                   <FileText className="h-3 w-3" />
@@ -712,7 +712,7 @@ export function ChatPopup() {
                                     href={`/api/attachments/${att.id}`}
                                     download={att.fileName}
                                     className={`p-0.5 rounded hover:bg-black/10 ${
-                                      isOwn ? "text-white/70" : "text-gray-500"
+                                      isOwn ? "text-white/70" : "text-muted-foreground"
                                     }`}
                                     title="Download"
                                   >
@@ -726,7 +726,7 @@ export function ChatPopup() {
                             className={`mt-1 text-[9px] ${
                               isOwn
                                 ? "text-white/50"
-                                : "text-gray-400"
+                                : "text-muted-foreground"
                             }`}
                           >
                             {timeAgo(msg.createdAt)}
@@ -751,7 +751,7 @@ export function ChatPopup() {
                   {attachments.map((file, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-[10px]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-[10px]"
                     >
                       <Paperclip className="h-2.5 w-2.5" />
                       <span className="max-w-[80px] truncate">{file.name}</span>
@@ -764,7 +764,7 @@ export function ChatPopup() {
                             ).filter((_, idx) => idx !== i),
                           }))
                         }
-                        className="text-gray-400 hover:text-red-500 ml-0.5"
+                        className="text-muted-foreground hover:text-red-500 ml-0.5"
                       >
                         x
                       </button>
@@ -777,7 +777,7 @@ export function ChatPopup() {
                   onClick={() =>
                     fileInputRefs.current[chat.conversationId]?.click()
                   }
-                  className="shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground/80"
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
@@ -813,7 +813,7 @@ export function ChatPopup() {
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="flex-1 resize-none rounded-lg border bg-white px-3 py-2 text-xs placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#00968a]/30"
+                  className="flex-1 resize-none rounded-lg border bg-card px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-500/30"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -824,7 +824,7 @@ export function ChatPopup() {
                 <button
                   onClick={() => handleSend(chat.conversationId)}
                   disabled={sending || (!messageText.trim() && attachments.length === 0)}
-                  className="shrink-0 rounded-lg bg-[#00968a] p-2 text-white disabled:opacity-50 hover:bg-[#007d73] transition-colors"
+                  className="shrink-0 rounded-lg bg-brand-600 p-2 text-white disabled:opacity-50 hover:bg-brand-700 transition-colors"
                 >
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
