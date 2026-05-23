@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const mine = searchParams.get("mine") !== "false"; // default true
     const search = searchParams.get("search") || "";
+    const deptFilter = searchParams.get("department"); // admin-only department filter
 
     const where: Record<string, unknown> = {};
 
@@ -45,7 +46,10 @@ export async function GET(request: NextRequest) {
     } else {
       // When not filtering by "mine", filter by department
       // ADMIN and PARTNER (department=null) see ALL tasks across departments
-      if (department && role !== "ADMIN" && role !== "PARTNER") {
+      if (role === "ADMIN" && deptFilter && deptFilter !== "ALL") {
+        // Admin can filter by any specific department
+        where.department = deptFilter;
+      } else if (department && role !== "ADMIN" && role !== "PARTNER") {
         where.department = department;
       } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
         where.department = "HR"; // fallback
@@ -100,7 +104,9 @@ export async function GET(request: NextRequest) {
     if (mine) {
       baseWhere.assignedToId = session.user.id;
     } else {
-      if (department && role !== "ADMIN" && role !== "PARTNER") {
+      if (role === "ADMIN" && deptFilter && deptFilter !== "ALL") {
+        baseWhere.department = deptFilter;
+      } else if (department && role !== "ADMIN" && role !== "PARTNER") {
         baseWhere.department = department;
       } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
         baseWhere.department = "HR";
