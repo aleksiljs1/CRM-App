@@ -493,6 +493,451 @@ async function main() {
     console.log("  Created ClientSubmission (INCOMPLETE) with 3 submitted documents for Alpha Corp");
   }
 
+  // ── Legal Department: Clients, Tasks with full lifecycle ──────────────────
+  const legalManager = await prisma.user.findUnique({ where: { email: "legal.manager@kreston.al" } });
+  const legalSenior = await prisma.user.findUnique({ where: { email: "legal.senior@kreston.al" } });
+  const legalAssociate = await prisma.user.findUnique({ where: { email: "legal.associate@kreston.al" } });
+  const legalJunior = await prisma.user.findUnique({ where: { email: "legal.junior@kreston.al" } });
+
+  if (legalManager && legalSenior && legalAssociate && legalJunior) {
+    // ── Legal Clients ──
+    const legalClient1 = await prisma.client.upsert({
+      where: { id: "seed-client-delta" },
+      update: {},
+      create: {
+        id: "seed-client-delta",
+        companyName: "Delta Holdings Sh.p.k.",
+        contactName: "Artan Shkreli",
+        contactEmail: "artan@deltaholdings.al",
+        phone: "+355 69 234 5678",
+        industry: "Real Estate",
+        status: "ACTIVE",
+        assignedToId: legalManager.id,
+      },
+    });
+
+    const legalClient2 = await prisma.client.upsert({
+      where: { id: "seed-client-epsilon" },
+      update: {},
+      create: {
+        id: "seed-client-epsilon",
+        companyName: "Epsilon Pharma Sh.a.",
+        contactName: "Violeta Hoxha",
+        contactEmail: "violeta@epsilonpharma.al",
+        phone: "+355 68 345 6789",
+        industry: "Healthcare",
+        status: "ACTIVE",
+        assignedToId: legalSenior.id,
+      },
+    });
+
+    const legalClient3 = await prisma.client.upsert({
+      where: { id: "seed-client-zeta" },
+      update: {},
+      create: {
+        id: "seed-client-zeta",
+        companyName: "Zeta Construction",
+        contactName: "Besnik Kola",
+        contactEmail: "besnik@zetaconstruction.al",
+        phone: "+355 67 456 7890",
+        industry: "Construction",
+        status: "LEAD",
+        assignedToId: legalAssociate.id,
+      },
+    });
+
+    const legalClient4 = await prisma.client.upsert({
+      where: { id: "seed-client-eta" },
+      update: {},
+      create: {
+        id: "seed-client-eta",
+        companyName: "Eta Retail Group",
+        contactName: "Dorina Prifti",
+        contactEmail: "dorina@etaretail.al",
+        phone: "+355 69 567 8901",
+        industry: "Retail",
+        status: "ACTIVE",
+        assignedToId: legalManager.id,
+      },
+    });
+
+    console.log("  Created 4 legal clients");
+
+    // ── Legal Process Type ──
+    const legalProcess = await prisma.processType.upsert({
+      where: { id: "seed-process-company-registration" },
+      update: {},
+      create: {
+        id: "seed-process-company-registration",
+        name: "Company Registration",
+        department: "LEGAL",
+        description: "Full company registration with NBS (National Business Center)",
+        createdById: legalManager.id,
+      },
+    });
+
+    await prisma.requiredDocument.deleteMany({ where: { processTypeId: legalProcess.id } });
+    const legalReqDocs = [
+      { name: "Founder ID Documents", description: "Passport or ID card of all founders" },
+      { name: "Articles of Association", description: "Company charter and bylaws" },
+      { name: "Capital Proof", description: "Bank statement showing initial capital deposit" },
+      { name: "Business Plan", description: "Brief business plan for registration" },
+    ];
+    for (const doc of legalReqDocs) {
+      await prisma.requiredDocument.create({
+        data: { processTypeId: legalProcess.id, documentName: doc.name, description: doc.description, isMandatory: true },
+      });
+    }
+    console.log("  Created process type: Company Registration with 4 required documents");
+
+    // ── Helper: create task with full status history ──
+    const now = Date.now();
+    const DAY = 86400000;
+    const HOUR = 3600000;
+
+    async function createTaskWithHistory(opts: {
+      id: string;
+      title: string;
+      description: string;
+      priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+      status: "TODO" | "IN_PROGRESS" | "REVIEW" | "APPROVED" | "COMPLETED";
+      department: "LEGAL";
+      assignedToId: string;
+      createdById: string;
+      clientId: string | null;
+      deadline: Date;
+      createdAt: Date;
+      transitions: { to: string; by: string; at: Date }[];
+    }) {
+      // Delete existing to allow re-seed
+      await prisma.taskStatusHistory.deleteMany({ where: { taskId: opts.id } });
+      await prisma.task.deleteMany({ where: { id: opts.id } });
+
+      const completedAt = opts.status === "COMPLETED" ? opts.transitions[opts.transitions.length - 1]?.at : undefined;
+
+      await prisma.task.create({
+        data: {
+          id: opts.id,
+          title: opts.title,
+          description: opts.description,
+          priority: opts.priority,
+          status: opts.status,
+          department: opts.department,
+          assignedToId: opts.assignedToId,
+          createdById: opts.createdById,
+          clientId: opts.clientId,
+          deadline: opts.deadline,
+          createdAt: opts.createdAt,
+          completedAt: completedAt,
+        },
+      });
+
+      for (let i = 0; i < opts.transitions.length; i++) {
+        const t = opts.transitions[i];
+        await prisma.taskStatusHistory.create({
+          data: {
+            taskId: opts.id,
+            fromStatus: i === 0 ? null : opts.transitions[i - 1].to,
+            toStatus: t.to,
+            changedById: t.by,
+            changedAt: t.at,
+          },
+        });
+      }
+    }
+
+    // ── COMPLETED tasks (good performance data) ──
+
+    await createTaskWithHistory({
+      id: "legal-task-01",
+      title: "Company Registration - Delta Holdings",
+      description: "Complete NBS registration for Delta Holdings Sh.p.k. including articles of association filing and founder documentation.",
+      priority: "HIGH",
+      status: "COMPLETED",
+      department: "LEGAL",
+      assignedToId: legalAssociate.id,
+      createdById: legalManager.id,
+      clientId: legalClient1.id,
+      deadline: new Date(now - 5 * DAY),
+      createdAt: new Date(now - 14 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 14 * DAY) },
+        { to: "IN_PROGRESS", by: legalAssociate.id, at: new Date(now - 13 * DAY) },
+        { to: "REVIEW", by: legalAssociate.id, at: new Date(now - 9 * DAY) },
+        { to: "APPROVED", by: legalSenior.id, at: new Date(now - 8 * DAY) },
+        { to: "COMPLETED", by: legalManager.id, at: new Date(now - 7 * DAY) },
+      ],
+    });
+
+    await createTaskWithHistory({
+      id: "legal-task-02",
+      title: "Contract Review - Epsilon Pharma Supply Agreement",
+      description: "Review and revise the pharmaceutical supply agreement between Epsilon Pharma and their EU supplier. Check compliance with Albanian import regulations.",
+      priority: "URGENT",
+      status: "COMPLETED",
+      department: "LEGAL",
+      assignedToId: legalSenior.id,
+      createdById: legalManager.id,
+      clientId: legalClient2.id,
+      deadline: new Date(now - 3 * DAY),
+      createdAt: new Date(now - 10 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 10 * DAY) },
+        { to: "IN_PROGRESS", by: legalSenior.id, at: new Date(now - 10 * DAY + 2 * HOUR) },
+        { to: "REVIEW", by: legalSenior.id, at: new Date(now - 6 * DAY) },
+        { to: "APPROVED", by: legalManager.id, at: new Date(now - 5 * DAY) },
+        { to: "COMPLETED", by: legalManager.id, at: new Date(now - 4 * DAY) },
+      ],
+    });
+
+    await createTaskWithHistory({
+      id: "legal-task-03",
+      title: "Employment Contracts Batch - Eta Retail",
+      description: "Draft 12 employment contracts for Eta Retail Group's new hires. Include non-compete clauses and probation terms as per Albanian labor law.",
+      priority: "MEDIUM",
+      status: "COMPLETED",
+      department: "LEGAL",
+      assignedToId: legalJunior.id,
+      createdById: legalManager.id,
+      clientId: legalClient4.id,
+      deadline: new Date(now - 1 * DAY),
+      createdAt: new Date(now - 12 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 12 * DAY) },
+        { to: "IN_PROGRESS", by: legalJunior.id, at: new Date(now - 11 * DAY) },
+        { to: "REVIEW", by: legalJunior.id, at: new Date(now - 5 * DAY) },
+        { to: "IN_PROGRESS", by: legalSenior.id, at: new Date(now - 4 * DAY) }, // sent back
+        { to: "REVIEW", by: legalJunior.id, at: new Date(now - 3 * DAY) },
+        { to: "APPROVED", by: legalSenior.id, at: new Date(now - 2 * DAY) },
+        { to: "COMPLETED", by: legalManager.id, at: new Date(now - 1 * DAY) },
+      ],
+    });
+
+    await createTaskWithHistory({
+      id: "legal-task-04",
+      title: "Trademark Registration - Epsilon Pharma",
+      description: "File trademark application for Epsilon Pharma's new product line with the Albanian IP Office.",
+      priority: "MEDIUM",
+      status: "COMPLETED",
+      department: "LEGAL",
+      assignedToId: legalAssociate.id,
+      createdById: legalManager.id,
+      clientId: legalClient2.id,
+      deadline: new Date(now - 8 * DAY),
+      createdAt: new Date(now - 20 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 20 * DAY) },
+        { to: "IN_PROGRESS", by: legalAssociate.id, at: new Date(now - 19 * DAY) },
+        { to: "REVIEW", by: legalAssociate.id, at: new Date(now - 12 * DAY) },
+        { to: "APPROVED", by: legalSenior.id, at: new Date(now - 11 * DAY) },
+        { to: "COMPLETED", by: legalManager.id, at: new Date(now - 10 * DAY) },
+      ],
+    });
+
+    // ── IN_PROGRESS tasks ──
+
+    await createTaskWithHistory({
+      id: "legal-task-05",
+      title: "Due Diligence - Zeta Construction Acquisition",
+      description: "Conduct legal due diligence for potential acquisition of Zeta Construction. Review all contracts, permits, litigation history, and regulatory compliance.",
+      priority: "HIGH",
+      status: "IN_PROGRESS",
+      department: "LEGAL",
+      assignedToId: legalSenior.id,
+      createdById: legalManager.id,
+      clientId: legalClient3.id,
+      deadline: new Date(now + 5 * DAY),
+      createdAt: new Date(now - 3 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 3 * DAY) },
+        { to: "IN_PROGRESS", by: legalSenior.id, at: new Date(now - 2 * DAY) },
+      ],
+    });
+
+    await createTaskWithHistory({
+      id: "legal-task-06",
+      title: "Lease Agreement Review - Delta Holdings",
+      description: "Review commercial lease agreement for Delta Holdings' new office space in Tirana. Negotiate terms with landlord's legal team.",
+      priority: "MEDIUM",
+      status: "IN_PROGRESS",
+      department: "LEGAL",
+      assignedToId: legalAssociate.id,
+      createdById: legalManager.id,
+      clientId: legalClient1.id,
+      deadline: new Date(now + 3 * DAY),
+      createdAt: new Date(now - 4 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 4 * DAY) },
+        { to: "IN_PROGRESS", by: legalAssociate.id, at: new Date(now - 3 * DAY) },
+      ],
+    });
+
+    // ── REVIEW task ──
+
+    await createTaskWithHistory({
+      id: "legal-task-07",
+      title: "Compliance Audit Report - Eta Retail",
+      description: "Prepare regulatory compliance report for Eta Retail covering consumer protection, data privacy (GDPR equivalent), and labor law compliance.",
+      priority: "HIGH",
+      status: "REVIEW",
+      department: "LEGAL",
+      assignedToId: null as any,
+      createdById: legalManager.id,
+      clientId: legalClient4.id,
+      deadline: new Date(now + 2 * DAY),
+      createdAt: new Date(now - 7 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 7 * DAY) },
+        { to: "IN_PROGRESS", by: legalJunior.id, at: new Date(now - 6 * DAY) },
+        { to: "REVIEW", by: legalJunior.id, at: new Date(now - 1 * DAY) },
+      ],
+    });
+
+    // ── APPROVED task (waiting for manager to complete) ──
+
+    await createTaskWithHistory({
+      id: "legal-task-08",
+      title: "Shareholder Agreement - Delta Holdings",
+      description: "Draft shareholder agreement for Delta Holdings' new equity partner. Include drag-along, tag-along, and anti-dilution clauses.",
+      priority: "URGENT",
+      status: "APPROVED",
+      department: "LEGAL",
+      assignedToId: legalManager.id,
+      createdById: legalManager.id,
+      clientId: legalClient1.id,
+      deadline: new Date(now + 1 * DAY),
+      createdAt: new Date(now - 8 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 8 * DAY) },
+        { to: "IN_PROGRESS", by: legalSenior.id, at: new Date(now - 7 * DAY) },
+        { to: "REVIEW", by: legalSenior.id, at: new Date(now - 3 * DAY) },
+        { to: "APPROVED", by: legalManager.id, at: new Date(now - 1 * DAY) },
+      ],
+    });
+
+    // ── TODO tasks ──
+
+    await createTaskWithHistory({
+      id: "legal-task-09",
+      title: "NDA Drafting - Zeta Construction",
+      description: "Draft non-disclosure agreement for Zeta Construction's partnership negotiations with an international contractor.",
+      priority: "LOW",
+      status: "TODO",
+      department: "LEGAL",
+      assignedToId: legalJunior.id,
+      createdById: legalManager.id,
+      clientId: legalClient3.id,
+      deadline: new Date(now + 10 * DAY),
+      createdAt: new Date(now - 1 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 1 * DAY) },
+      ],
+    });
+
+    await createTaskWithHistory({
+      id: "legal-task-10",
+      title: "Annual License Renewal - Epsilon Pharma",
+      description: "Prepare and file annual pharmaceutical license renewal with the National Agency for Medicines. Deadline is strict — late filing means suspension.",
+      priority: "URGENT",
+      status: "TODO",
+      department: "LEGAL",
+      assignedToId: legalAssociate.id,
+      createdById: legalManager.id,
+      clientId: legalClient2.id,
+      deadline: new Date(now + 4 * DAY),
+      createdAt: new Date(now),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now) },
+      ],
+    });
+
+    // ── OVERDUE task (for performance alerts) ──
+
+    await createTaskWithHistory({
+      id: "legal-task-11",
+      title: "Tax Dispute Response - Eta Retail",
+      description: "Draft legal response to tax authority's assessment dispute. Client received penalty notice — need to file appeal within deadline.",
+      priority: "URGENT",
+      status: "IN_PROGRESS",
+      department: "LEGAL",
+      assignedToId: legalSenior.id,
+      createdById: legalManager.id,
+      clientId: legalClient4.id,
+      deadline: new Date(now - 2 * DAY),
+      createdAt: new Date(now - 10 * DAY),
+      transitions: [
+        { to: "TODO", by: legalManager.id, at: new Date(now - 10 * DAY) },
+        { to: "IN_PROGRESS", by: legalSenior.id, at: new Date(now - 9 * DAY) },
+      ],
+    });
+
+    console.log("  Created 11 legal tasks across all statuses with full history");
+
+    // ── Legal Emails ──
+    await prisma.email.deleteMany({ where: { threadId: { in: ["legal-thread-001", "legal-thread-002", "legal-thread-003"] } } });
+
+    await prisma.email.create({
+      data: {
+        threadId: "legal-thread-001",
+        senderEmail: "artan@deltaholdings.al",
+        senderName: "Artan Shkreli",
+        recipientDept: "LEGAL",
+        subject: "Urgent: Shareholder agreement deadline",
+        body: "Dear legal team, we need the shareholder agreement finalized by end of this week. Our new partner is ready to sign and any delay will jeopardize the deal. Please prioritize this.",
+        isIncoming: true,
+        isReplied: false,
+        clientId: legalClient1.id,
+      },
+    });
+
+    const legalThread2Root = await prisma.email.create({
+      data: {
+        threadId: "legal-thread-002",
+        senderEmail: "violeta@epsilonpharma.al",
+        senderName: "Violeta Hoxha",
+        recipientDept: "LEGAL",
+        subject: "License renewal documents",
+        body: "Hi, I'm sending over the documents needed for our annual pharmaceutical license renewal. Please confirm receipt and let us know if anything is missing.",
+        isIncoming: true,
+        isReplied: true,
+        repliedAt: new Date(now - 2 * DAY),
+        clientId: legalClient2.id,
+      },
+    });
+
+    await prisma.email.create({
+      data: {
+        threadId: "legal-thread-002",
+        parentId: legalThread2Root.id,
+        senderEmail: "legal.manager@kreston.al",
+        senderName: "Mira Topalli",
+        recipientDept: "LEGAL",
+        subject: "Re: License renewal documents",
+        body: "Thank you Violeta. We received the documents. We are missing the updated GMP certificate — could you send that over? We'll start preparing the application in the meantime.",
+        isIncoming: false,
+        isReplied: false,
+        userId: legalManager.id,
+        clientId: legalClient2.id,
+      },
+    });
+
+    await prisma.email.create({
+      data: {
+        threadId: "legal-thread-003",
+        senderEmail: "besnik@zetaconstruction.al",
+        senderName: "Besnik Kola",
+        recipientDept: "LEGAL",
+        subject: "Initial consultation request - construction permits",
+        body: "Hello Kreston legal team, we are a construction company looking for legal advisory on building permits and regulatory compliance for a new residential project in Durres. Can we schedule a meeting?",
+        isIncoming: true,
+        isReplied: false,
+        clientId: legalClient3.id,
+      },
+    });
+
+    console.log("  Created 4 legal emails across 3 threads");
+  }
+
   console.log("\nSeeding complete!");
 }
 
