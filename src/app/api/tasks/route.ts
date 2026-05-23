@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
             requiredDocuments: true,
           },
         },
+        requiredDocument: true,
         attachments: true,
         statusHistory: {
           include: { changedBy: { select: { id: true, name: true } } },
@@ -169,6 +170,7 @@ export async function POST(request: NextRequest) {
     const assignedToIdRaw = formData.get("assignedToId") as string | null;
     const clientId = formData.get("clientId") as string | null;
     const processTypeId = formData.get("processTypeId") as string | null;
+    const requiredDocumentId = formData.get("requiredDocumentId") as string | null;
 
     if (!title || !title.trim()) {
       return Response.json({ error: "Title is required" }, { status: 400 });
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest) {
         department: (department || session.user.department || null) as Department | null,
         clientId: clientId || null,
         processTypeId: processTypeId || null,
+        requiredDocumentId: requiredDocumentId || null,
         assignedToId: assignedToId,
         createdById: session.user.id,
         attachments: {
@@ -261,6 +264,7 @@ export async function POST(request: NextRequest) {
         processType: {
           include: { requiredDocuments: true },
         },
+        requiredDocument: true,
         attachments: true,
         statusHistory: {
           include: { changedBy: { select: { id: true, name: true } } },

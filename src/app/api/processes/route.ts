@@ -37,7 +37,12 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         requiredDocuments: true,
-        _count: { select: { requiredDocuments: true } },
+        submissions: {
+          include: {
+            client: { select: { id: true, companyName: true, contactName: true } },
+          },
+        },
+        _count: { select: { requiredDocuments: true, submissions: true } },
       },
       orderBy: [{ department: "asc" }, { name: "asc" }],
     });

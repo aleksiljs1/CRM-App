@@ -75,7 +75,7 @@ export default function LegalProcessesPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   // Restrict to LEGAL managers or ADMIN
-  const isAllowed = userRole === "ADMIN" || (userRole === "MANAGER" && userDept === "LEGAL");
+  const isAllowed = userRole === "ADMIN" || (userRole === "MANAGER" && (userDept === "LEGAL" || userDept === "AUDIT"));
 
   useEffect(() => {
     if (isAllowed) {
@@ -140,7 +140,7 @@ export default function LegalProcessesPage() {
   async function fetchProcesses() {
     try {
       setLoading(true);
-      const deptParam = userRole === "ADMIN" ? "" : "?department=LEGAL";
+      const deptParam = userRole === "ADMIN" ? "" : `?department=${userDept || "LEGAL"}`;
       const res = await fetch(`/api/processes${deptParam}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
@@ -223,6 +223,53 @@ export default function LegalProcessesPage() {
         { name: "Follow-up Tracking Document", description: "Internal tracking document for monitoring application status, authority correspondence, and deadline management.", isMandatory: true },
       ],
     },
+    // ── AUDIT TEMPLATES ──
+    {
+      id: "tpl-annual-audit",
+      name: "Annual Financial Audit (IFRS/AAS)",
+      description: "Full annual statutory audit of financial statements in accordance with International Standards on Auditing (ISA) and Albanian Auditing Standards (AAS). Includes planning, fieldwork, and reporting phases.",
+      clientDocs: [
+        { name: "Annual Financial Statements", description: "Complete set of financial statements: Balance Sheet, Income Statement (P&L), Cash Flow Statement, Statement of Changes in Equity, and Notes. For the year under audit.", isMandatory: true },
+        { name: "Trial Balance", description: "Detailed trial balance as at year-end showing all general ledger account balances. Must agree to the financial statements.", isMandatory: true },
+        { name: "Bank Statements & Reconciliations", description: "Bank statements for all accounts for the full audit period, plus bank reconciliations as at year-end. Include certificates of balances from banks.", isMandatory: true },
+        { name: "Fixed Asset Register", description: "Complete listing of all fixed assets with acquisition dates, costs, depreciation rates, accumulated depreciation, and net book values.", isMandatory: true },
+        { name: "Accounts Receivable Aging", description: "Aged listing of all trade receivables as at year-end, showing current and overdue amounts by period (30/60/90/120+ days).", isMandatory: true },
+        { name: "Accounts Payable Listing", description: "Complete listing of all trade payables and accrued liabilities as at year-end with supplier names and amounts.", isMandatory: true },
+        { name: "Tax Returns & Declarations", description: "All tax returns filed during the year: VAT returns (monthly), Corporate Income Tax, Personal Income Tax withholdings, Social Insurance declarations.", isMandatory: true },
+        { name: "Board Minutes & Shareholder Resolutions", description: "Minutes of all Board of Directors meetings and General Assembly resolutions held during the audit period.", isMandatory: true },
+        { name: "Contracts & Agreements", description: "Copies of all significant contracts: loan agreements, lease agreements, major supplier/customer contracts, employment contracts for key personnel.", isMandatory: false },
+        { name: "Previous Year Audit Report", description: "Prior year's auditor report and management letter for reference and comparative purposes.", isMandatory: true },
+      ],
+      internalDocs: [
+        { name: "Audit Planning Memorandum", description: "Comprehensive audit plan including materiality assessment, risk identification, audit strategy, team assignments, and timeline. Per ISA 300.", isMandatory: true },
+        { name: "Risk Assessment Documentation", description: "Documentation of identified risks of material misstatement at financial statement and assertion level. Includes fraud risk assessment per ISA 315/240.", isMandatory: true },
+        { name: "Audit Working Papers", description: "Complete set of working papers documenting all audit procedures performed, evidence obtained, and conclusions reached for each financial statement area.", isMandatory: true },
+        { name: "Bank Confirmation Letters", description: "Direct confirmation letters sent to all banks requesting independent verification of balances, loans, guarantees, and authorized signatories.", isMandatory: true },
+        { name: "Accounts Receivable Confirmations", description: "External confirmation requests sent to a sample of debtors to verify receivable balances. Document responses and alternative procedures.", isMandatory: true },
+        { name: "Management Representation Letter", description: "Formal letter from management confirming representations made during the audit regarding financial statements, disclosures, and compliance. Per ISA 580.", isMandatory: true },
+        { name: "Draft Audit Report", description: "Draft independent auditor's report including opinion, basis for opinion, key audit matters, and other reporting responsibilities.", isMandatory: true },
+        { name: "Management Letter", description: "Letter to management documenting internal control deficiencies, accounting issues, and recommendations for improvement identified during the audit.", isMandatory: true },
+        { name: "Analytical Review Documentation", description: "Documentation of analytical procedures performed including trend analysis, ratio analysis, and investigation of significant fluctuations.", isMandatory: true },
+      ],
+    },
+    {
+      id: "tpl-internal-controls",
+      name: "Internal Controls Review",
+      description: "Assessment of the client's internal control environment over financial reporting, including evaluation of control design, implementation, and operating effectiveness.",
+      clientDocs: [
+        { name: "Organizational Chart", description: "Current organizational structure showing reporting lines, departments, and key personnel with their roles.", isMandatory: true },
+        { name: "Accounting Policies Manual", description: "Document describing the company's accounting policies, procedures, and chart of accounts.", isMandatory: true },
+        { name: "Authorization Matrix", description: "Document showing approval authorities and limits for transactions: purchases, payments, payroll, journal entries.", isMandatory: true },
+        { name: "IT Systems Documentation", description: "Description of accounting/ERP systems used, access controls, backup procedures, and IT general controls.", isMandatory: true },
+        { name: "Bank Signatory List", description: "Current list of authorized bank signatories with their approval limits.", isMandatory: true },
+      ],
+      internalDocs: [
+        { name: "Internal Controls Assessment Report", description: "Comprehensive report evaluating the design and operating effectiveness of key internal controls over financial reporting.", isMandatory: true },
+        { name: "Control Testing Working Papers", description: "Documentation of all control testing procedures performed, samples selected, results obtained, and exceptions noted.", isMandatory: true },
+        { name: "Risk & Control Matrix", description: "Matrix mapping identified risks to relevant controls, assessing control design adequacy and effectiveness ratings.", isMandatory: true },
+        { name: "Recommendations Report", description: "Report detailing identified control weaknesses with risk ratings (High/Medium/Low), root causes, and specific improvement recommendations.", isMandatory: true },
+      ],
+    },
   ];
 
   function loadTemplate(templateId: string) {
@@ -301,7 +348,7 @@ export default function LegalProcessesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formName,
-          department: "LEGAL",
+          department: userDept || "LEGAL",
           description: formDesc || null,
           clientId: formClientId || null,
           documents,
@@ -404,10 +451,31 @@ export default function LegalProcessesPage() {
                     <p className="text-sm font-semibold text-foreground">
                       {p.name}
                     </p>
-                    {p.description && (
-                      <p className="mt-0.5 text-xs text-muted-foreground truncate">
-                        {p.description}
-                      </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {p.description && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {p.description}
+                        </p>
+                      )}
+                    </div>
+                    {(p as any).submissions?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {(p as any).submissions.map((sub: any) => (
+                          <span
+                            key={sub.id}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              sub.status === "COMPLETE"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : sub.status === "APPROVED"
+                                ? "bg-brand-100 text-brand-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            <Building2 className="h-2.5 w-2.5" />
+                            {sub.client?.companyName || "Unknown"} — {sub.status}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
 

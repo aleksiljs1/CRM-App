@@ -24,8 +24,15 @@ export async function GET(request: NextRequest) {
     const showAll = searchParams.get("all") === "true";
     if (!isAdminOrPartner && !showAll) {
       if (userRole === "MANAGER") {
-        // MANAGER: see clients where assignedTo user is in their department
-        where.assignedTo = { department: userDept };
+        // MANAGER: see clients where:
+        // 1. assignedTo is in their department, OR
+        // 2. client has a submission for a process in their department, OR
+        // 3. client has a task in their department
+        where.OR = [
+          { assignedTo: { department: userDept } },
+          { submissions: { some: { processType: { department: userDept as any } } } },
+          { tasks: { some: { department: userDept as any } } },
+        ];
       } else {
         // Others: see only clients assigned to them personally
         where.assignedToId = session.user.id;

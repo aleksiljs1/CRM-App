@@ -6,6 +6,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { askGemini } from "@/lib/gemini";
+import { createNotification } from "@/lib/notify";
 
 export async function GET() {
   try {
@@ -239,6 +240,42 @@ Return ONLY a JSON array:
         aiValidation: validation,
       },
     });
+
+    // Notify team members working on this process
+    const clientName = client.companyName || client.contactName;
+    const matchedDocNames = matched.join(", ");
+    const notifMessage = complete
+      ? `${clientName} has submitted all required documents for "${processType.name}". Ready for processing.`
+      : `${clientName} uploaded documents for "${processType.name}" (${matched.length}/${requiredDocs.length} matched: ${matchedDocNames}). Missing: ${missing.join(", ")}`;
+
+    // Find tasks linked to this process to get assigned employees
+    const linkedTasks = await prisma.task.findMany({
+      where: { processTypeId },
+      select: { assignedToId: true, createdById: true },
+    });
+    const userIdsToNotify = new Set<string>();
+    for (const t of linkedTasks) {
+      if (t.assignedToId) userIdsToNotify.add(t.assignedToId);
+      if (t.createdById) userIdsToNotify.add(t.createdById);
+    }
+
+    // Also notify the department manager
+    const deptManager = await prisma.user.findFirst({
+      where: { department: processType.department as any, role: "MANAGER", isActive: true },
+      select: { id: true },
+    });
+    if (deptManager) userIdsToNotify.add(deptManager.id);
+
+    // Send notifications via Socket.io
+    for (const userId of userIdsToNotify) {
+      await createNotification({
+        userId,
+        title: complete ? "Client Documents Complete" : "Client Uploaded Documents",
+        message: notifMessage,
+        type: "DOCUMENT",
+        link: "/dashboard/hr/documents",
+      });
+    }
 
     // Refetch for response
     const updatedSubmission = await prisma.clientSubmission.findUnique({

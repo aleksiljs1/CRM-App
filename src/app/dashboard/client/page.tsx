@@ -101,7 +101,29 @@ export default async function ClientDashboardPage() {
   });
 
   const submissions = client?.submissions ?? [];
-  const allTasks = client?.tasks ?? [];
+  const directTasks = client?.tasks ?? [];
+
+  // Also fetch tasks linked to processes that this client has submissions for
+  const clientProcessIds = submissions.map((s) => s.processTypeId);
+  const processTasks = clientProcessIds.length > 0
+    ? await prisma.task.findMany({
+        where: {
+          processTypeId: { in: clientProcessIds },
+          clientId: null, // tasks not directly linked to client but linked via process
+        },
+        include: {
+          assignedTo: { select: { id: true, name: true, role: true } },
+          requiredDocument: { select: { id: true, documentName: true } },
+        },
+      })
+    : [];
+
+  // Merge direct tasks + process-linked tasks (deduplicate)
+  const taskIds = new Set(directTasks.map((t: any) => t.id));
+  const allTasks = [
+    ...directTasks,
+    ...processTasks.filter((t) => !taskIds.has(t.id)),
+  ];
 
   // Fetch processes linked to client tasks (for the Processes section)
   const processesFromTasks = allTasks
@@ -123,6 +145,23 @@ export default async function ClientDashboardPage() {
       })
     : [];
 
+  // Fetch tasks linked to processes for this client (shows what legal team is working on)
+  // Includes tasks directly linked to client AND tasks linked via process submissions
+  const teamProcessTasks = await prisma.task.findMany({
+    where: {
+      processTypeId: { in: clientProcessIds.length > 0 ? clientProcessIds : ["none"] },
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      processTypeId: true,
+      requiredDocumentId: true,
+      requiredDocument: { select: { id: true, documentName: true } },
+      assignedTo: { select: { name: true, subRole: true, role: true } },
+    },
+  });
+
   // Build process status data for the UI
   const processStatusData = clientProcesses.map((proc) => {
     const sub = submissions.find((s) => s.processTypeId === proc.id);
@@ -135,6 +174,20 @@ export default async function ClientDashboardPage() {
     const requiredDocs = proc.requiredDocuments;
     const uploadedCount = matchedIds.size;
     const missingDocs = requiredDocs.filter((r) => !matchedIds.has(r.id));
+
+    // Tasks linked to this process
+    const linkedTasks = teamProcessTasks
+      .filter((t) => t.processTypeId === proc.id)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        documentName: t.requiredDocument?.documentName || null,
+        assignedTo: t.assignedTo
+          ? t.assignedTo.subRole || t.assignedTo.role
+          : "Unassigned",
+      }));
+
     return {
       id: proc.id,
       name: proc.name,
@@ -150,6 +203,7 @@ export default async function ClientDashboardPage() {
         description: d.description,
         isMandatory: d.isMandatory,
       })),
+      teamTasks: linkedTasks,
     };
   });
 

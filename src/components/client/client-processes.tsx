@@ -25,6 +25,14 @@ interface RequiredDocInfo {
   isMandatory: boolean;
 }
 
+interface TeamTask {
+  id: string;
+  title: string;
+  status: string;
+  documentName: string | null;
+  assignedTo: string;
+}
+
 interface ProcessStatus {
   id: string;
   name: string;
@@ -35,6 +43,7 @@ interface ProcessStatus {
   submissionId: string | null;
   status: string | null;
   requiredDocuments: RequiredDocInfo[];
+  teamTasks?: TeamTask[];
 }
 
 interface CheckResult {
@@ -623,6 +632,55 @@ export function ClientProcessesSection({
                     Missing: {fb.missing.join(", ")}
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Team Progress - what the legal team is working on */}
+            {proc.teamTasks && proc.teamTasks.length > 0 && (
+              <div className="border-t px-4 py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                  Team Progress
+                </p>
+                <div className="space-y-1">
+                  {proc.teamTasks.map((task) => {
+                    const statusColors: Record<string, string> = {
+                      TODO: "bg-gray-100 text-gray-600",
+                      IN_PROGRESS: "bg-blue-100 text-blue-700",
+                      REVIEW: "bg-amber-100 text-amber-700",
+                      APPROVED: "bg-teal-100 text-teal-700",
+                      COMPLETED: "bg-emerald-100 text-emerald-700",
+                    };
+                    const statusLabels: Record<string, string> = {
+                      TODO: "Pending",
+                      IN_PROGRESS: "In Progress",
+                      REVIEW: "Under Review",
+                      APPROVED: "Approved",
+                      COMPLETED: "Done",
+                    };
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 bg-muted/30"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground truncate">
+                            {task.documentName || task.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Handled by {task.assignedTo}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            statusColors[task.status] || "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {statusLabels[task.status] || task.status}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>

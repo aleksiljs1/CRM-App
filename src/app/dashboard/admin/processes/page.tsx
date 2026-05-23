@@ -74,8 +74,15 @@ export default function ProcessManagementPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
+  // Progress view
+  const [viewMode, setViewMode] = useState<"manage" | "progress">("manage");
+  const [stats, setStats] = useState<any[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [expandedStatId, setExpandedStatId] = useState<string | null>(null);
+
   useEffect(() => {
     fetchProcesses();
+    fetchStats();
   }, []);
 
   async function fetchProcesses() {
@@ -89,6 +96,20 @@ export default function ProcessManagementPage() {
       console.error("Failed to load processes");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchStats() {
+    setStatsLoading(true);
+    try {
+      const res = await fetch("/api/processes/stats");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setStats(data.stats || []);
+    } catch {
+      // silent
+    } finally {
+      setStatsLoading(false);
     }
   }
 
@@ -235,17 +256,172 @@ export default function ProcessManagementPage() {
             Manage service types, departments, and required documents
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-700 md:w-auto md:justify-start"
-        >
-          <Plus className="h-4 w-4" />
-          Add Process Type
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+            <button
+              onClick={() => setViewMode("manage")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                viewMode === "manage"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Manage
+            </button>
+            <button
+              onClick={() => { setViewMode("progress"); fetchStats(); }}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                viewMode === "progress"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Progress
+            </button>
+          </div>
+          {viewMode === "manage" && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
+            >
+              <Plus className="h-4 w-4" />
+              Add Process Type
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Grouped list */}
-      {Object.keys(grouped).length === 0 ? (
+      {/* Progress View */}
+      {viewMode === "progress" && (
+        <div className="space-y-4">
+          {statsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-brand-600" />
+            </div>
+          ) : stats.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-12">No processes found</p>
+          ) : (
+            stats.map((proc) => (
+              <div key={proc.id} className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <button
+                  onClick={() => setExpandedStatId(expandedStatId === proc.id ? null : proc.id)}
+                  className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FolderOpen className="h-5 w-5 text-brand-600 shrink-0" />
+                    <div className="text-left min-w-0">
+                      <p className="font-semibold text-foreground">{proc.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {DEPT_LABELS[proc.department] || proc.department} &middot; {proc.clientDocsCount} client docs &middot; {proc.internalDocsCount} internal docs
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-brand-600">{proc.totalSubmissions}</p>
+                      <p className="text-[10px] text-muted-foreground">clients</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-blue-600">{proc.totalTasks}</p>
+                      <p className="text-[10px] text-muted-foreground">tasks</p>
+                    </div>
+                    {expandedStatId === proc.id ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </button>
+
+                {expandedStatId === proc.id && (
+                  <div className="border-t px-5 py-4 space-y-4">
+                    {/* Client Submissions */}
+                    {proc.submissions.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                          Client Submissions
+                        </p>
+                        <div className="space-y-2">
+                          {proc.submissions.map((sub: any) => (
+                            <div key={sub.id} className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-2.5">
+                              <div>
+                                <p className="text-sm font-medium">{sub.client?.companyName || "Unknown"}</p>
+                                <p className="text-xs text-muted-foreground">{sub.client?.contactName}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {/* Progress bar */}
+                                <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${sub.completionPct === 100 ? "bg-emerald-500" : "bg-brand-500"}`}
+                                    style={{ width: `${sub.completionPct}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs font-medium w-12 text-right">
+                                  {sub.matchedDocs}/{sub.totalRequired}
+                                </span>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  sub.status === "COMPLETE" ? "bg-emerald-100 text-emerald-700" :
+                                  sub.status === "APPROVED" ? "bg-brand-100 text-brand-700" :
+                                  sub.status === "UNDER_REVIEW" ? "bg-amber-100 text-amber-700" :
+                                  "bg-gray-100 text-gray-600"
+                                }`}>
+                                  {sub.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Team Tasks */}
+                    {proc.tasks.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                          Team Tasks
+                        </p>
+                        <div className="space-y-1.5">
+                          {proc.tasks.map((task: any) => (
+                            <div key={task.id} className="flex items-center justify-between rounded-lg px-4 py-2 hover:bg-muted/30">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {task.documentName ? task.documentName : task.title}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  Assigned to {task.assignedTo}
+                                </p>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                task.status === "COMPLETED" ? "bg-emerald-100 text-emerald-700" :
+                                task.status === "APPROVED" ? "bg-brand-100 text-brand-700" :
+                                task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
+                                task.status === "REVIEW" ? "bg-amber-100 text-amber-700" :
+                                "bg-gray-100 text-gray-600"
+                              }`}>
+                                {task.status.replace("_", " ")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {proc.submissions.length === 0 && proc.tasks.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No active submissions or tasks for this process yet.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Grouped list (Manage view) */}
+      {viewMode === "manage" && (
+      Object.keys(grouped).length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border bg-card py-16 shadow-sm">
           <span className="flex size-12 items-center justify-center rounded-xl bg-muted">
             <FolderOpen className="size-6 text-muted-foreground" />
@@ -507,7 +683,7 @@ export default function ProcessManagementPage() {
             </div>
           </section>
         ))
-      )}
+      ))}
 
       {/* Add/Edit Process Modal */}
       {showModal && (

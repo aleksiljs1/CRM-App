@@ -117,7 +117,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/hr/processes",
     icon: FolderOpen,
     roles: ["ADMIN", "MANAGER"],
-    departments: ["LEGAL"],
+    departments: ["LEGAL", "AUDIT"],
   },
   {
     label: "Emails",

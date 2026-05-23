@@ -518,6 +518,8 @@ function TaskDetailModal({
   const [reviewerLoading, setReviewerLoading] = useState(false);
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
   const [progressNote, setProgressNote] = useState("");
+  const [progressFiles, setProgressFiles] = useState<File[]>([]);
+  const progressFileRef = useRef<HTMLInputElement>(null);
   const [progressing, setProgressing] = useState(false);
 
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
@@ -564,14 +566,30 @@ function TaskDetailModal({
     setProgressing(true);
     try {
       const trimmed = progressNote.trim();
-      if (trimmed) {
-        // Optional: post the description as a team comment, prefixed with the
-        // status transition for context. Don't block the status change if it
-        // fails — show a toast.
+
+      // Upload progress files as task attachments
+      if (progressFiles.length > 0) {
         try {
-          await axios.post(`/api/tasks/${task.id}/comments`, {
-            body: `Progress note · ${STATUS_CONFIG[task.status]?.label ?? task.status} → ${STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}\n\n${trimmed}`,
+          const formData = new FormData();
+          formData.append("taskId", task.id);
+          for (const file of progressFiles) {
+            formData.append("attachments", file);
+          }
+          await axios.post(`/api/tasks/${task.id}/attachments`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
           });
+        } catch {
+          toast.error("File upload failed, moving task anyway.");
+        }
+      }
+
+      if (trimmed) {
+        const fileNames = progressFiles.map(f => f.name);
+        const noteWithFiles = fileNames.length > 0
+          ? `Progress note · ${STATUS_CONFIG[task.status]?.label ?? task.status} → ${STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}\n\n${trimmed}\n\nAttached: ${fileNames.join(", ")}`
+          : `Progress note · ${STATUS_CONFIG[task.status]?.label ?? task.status} → ${STATUS_CONFIG[finalNextStatus]?.label ?? finalNextStatus}\n\n${trimmed}`;
+        try {
+          await axios.post(`/api/tasks/${task.id}/comments`, { body: noteWithFiles });
         } catch {
           toast.error("Couldn't save your note as a comment. Moving the task anyway.");
         }
@@ -579,6 +597,7 @@ function TaskDetailModal({
       onStatusChange(task.id, finalNextStatus);
       setProgressDialogOpen(false);
       setProgressNote("");
+      setProgressFiles([]);
     } finally {
       setProgressing(false);
     }
@@ -675,6 +694,16 @@ function TaskDetailModal({
               <h4 className="text-sm font-semibold text-foreground mb-1">
                 Process: {task.processType.name}
               </h4>
+              {(task as any).requiredDocument && (
+                <div className="mb-3 rounded-md border border-brand-300 dark:border-brand-700 bg-brand-50/50 dark:bg-brand-950/30 p-2.5">
+                  <p className="text-xs font-semibold text-brand-700 dark:text-brand-300">
+                    Assigned Document: {(task as any).requiredDocument.documentName}
+                  </p>
+                  {(task as any).requiredDocument.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{(task as any).requiredDocument.description}</p>
+                  )}
+                </div>
+              )}
               {task.processType.description && (
                 <p className="text-xs text-muted-foreground mb-3">{task.processType.description}</p>
               )}
@@ -897,6 +926,48 @@ function TaskDetailModal({
                 If you write something, it&apos;ll be posted as a team comment
                 on this task. Leave it blank to just move the task.
               </p>
+
+              {/* Attach documents */}
+              <div className="mt-3">
+                <label className="flex items-center gap-2 text-xs font-semibold text-foreground mb-1.5">
+                  <Paperclip className="h-3 w-3" />
+                  Attach documents
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    optional
+                  </span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const newFiles = Array.from(e.target.files);
+                      setProgressFiles(prev => [...prev, ...newFiles]);
+                      toast.success(`${newFiles.length} file(s) selected`);
+                    }
+                    e.target.value = "";
+                  }}
+                  className="w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-brand-700 file:cursor-pointer cursor-pointer text-muted-foreground"
+                />
+                {progressFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {progressFiles.map((file, i) => (
+                      <div key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs">
+                        <Paperclip className="h-3 w-3 text-brand-600" />
+                        <span className="max-w-[140px] truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setProgressFiles(prev => prev.filter((_, idx) => idx !== i))}
+                          className="text-muted-foreground hover:text-red-500 ml-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer */}
@@ -956,7 +1027,7 @@ function NewTaskForm({
   const { data: session } = useSession();
   const userDept = session?.user?.department;
   const userRole = session?.user?.role || "";
-  const showProcessLink = userRole === "ADMIN" || userDept === "LEGAL";
+  const showProcessLink = userRole === "ADMIN" || userDept === "LEGAL" || userDept === "AUDIT";
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -964,6 +1035,7 @@ function NewTaskForm({
   const [deadline, setDeadline] = useState("");
   const [assignToId, setAssignToId] = useState<string>("");
   const [processTypeId, setProcessTypeId] = useState<string>("");
+  const [requiredDocumentId, setRequiredDocumentId] = useState<string>("");
   const [processes, setProcesses] = useState<ProcessTypeOption[]>([]);
   const [taskAttachments, setTaskAttachments] = useState<File[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -1084,6 +1156,9 @@ function NewTaskForm({
       if (processTypeId) {
         formData.append("processTypeId", processTypeId);
       }
+      if (requiredDocumentId) {
+        formData.append("requiredDocumentId", requiredDocumentId);
+      }
       for (const file of taskAttachments) {
         formData.append("attachments", file);
       }
@@ -1176,7 +1251,7 @@ function NewTaskForm({
                 </label>
                 <select
                   value={processTypeId}
-                  onChange={(e) => setProcessTypeId(e.target.value)}
+                  onChange={(e) => { setProcessTypeId(e.target.value); setRequiredDocumentId(""); }}
                   className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 >
                   <option value="">No process linked</option>
@@ -1229,6 +1304,42 @@ function NewTaskForm({
                           </ul>
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* Select specific document to work on */}
+                {processTypeId && (() => {
+                  const selected = processes.find((p) => p.id === processTypeId);
+                  if (!selected) return null;
+                  const internalDocs = selected.requiredDocuments.filter((d: any) => d.source === "INTERNAL");
+                  if (internalDocs.length === 0) return null;
+                  return (
+                    <div className="mt-3">
+                      <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                        Assign Specific Document to Produce
+                      </label>
+                      <select
+                        value={requiredDocumentId}
+                        onChange={(e) => setRequiredDocumentId(e.target.value)}
+                        className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                      >
+                        <option value="">All documents (general task)</option>
+                        {internalDocs.map((d: any) => (
+                          <option key={d.id} value={d.id}>
+                            {d.documentName}
+                          </option>
+                        ))}
+                      </select>
+                      {requiredDocumentId && (() => {
+                        const doc = internalDocs.find((d: any) => d.id === requiredDocumentId);
+                        if (!doc?.description) return null;
+                        return (
+                          <p className="mt-1 text-xs text-muted-foreground italic">
+                            {doc.description}
+                          </p>
+                        );
+                      })()}
                     </div>
                   );
                 })()}

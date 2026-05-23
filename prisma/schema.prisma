@@ -189,6 +189,7 @@ model RequiredDocument {
   // Relations
   processType       ProcessType         @relation(fields: [processTypeId], references: [id], onDelete: Cascade)
   matchedDocuments  SubmittedDocument[]
+  tasks             Task[]
 
   @@index([processTypeId])
 }
@@ -241,7 +242,8 @@ model Task {
   assignedToId String?
   createdById  String
   clientId     String?
-  processTypeId String?
+  processTypeId      String?
+  requiredDocumentId String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   completedAt  DateTime?
@@ -250,7 +252,8 @@ model Task {
   assignedTo     User?              @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdBy      User               @relation("TaskCreator", fields: [createdById], references: [id])
   client         Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  processType    ProcessType?       @relation(fields: [processTypeId], references: [id], onDelete: SetNull)
+  processType      ProcessType?       @relation(fields: [processTypeId], references: [id], onDelete: SetNull)
+  requiredDocument RequiredDocument?  @relation(fields: [requiredDocumentId], references: [id], onDelete: SetNull)
   attachments    TaskAttachment[]
   statusHistory  TaskStatusHistory[]
   comments       TaskComment[]
