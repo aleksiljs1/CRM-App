@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { askGemini } from "@/lib/gemini";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 const AI_COMPATIBLE_TYPES = [
   "application/pdf",
@@ -32,15 +32,18 @@ async function findAttachment(id: string) {
 
 async function extractText(filePath: string, mimeType: string): Promise<string> {
   const fullPath = path.join(process.cwd(), "public", filePath);
+  console.log("[DOC-ASK] Reading file:", fullPath, "mimeType:", mimeType);
   const buffer = await readFile(fullPath);
+  console.log("[DOC-ASK] File size:", buffer.length);
 
   if (mimeType === "application/pdf") {
-    try {
-      const result = await pdfParse(buffer);
-      return result.text;
-    } catch {
-      return buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-    }
+    const pdf = new PDFParse(new Uint8Array(buffer));
+    await pdf.load();
+    const result = await pdf.getText();
+    const text = (result as any).pages?.map((p: any) => p.text || "").join("\n") || "";
+    pdf.destroy();
+    console.log("[DOC-ASK] PDF extracted, text length:", text.length);
+    return text;
   }
 
   if (

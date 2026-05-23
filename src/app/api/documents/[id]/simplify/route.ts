@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { askGemini } from "@/lib/gemini";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 const AI_COMPATIBLE_TYPES = [
   "application/pdf",
@@ -36,9 +36,16 @@ async function extractText(filePath: string, mimeType: string): Promise<string> 
 
   if (mimeType === "application/pdf") {
     try {
-      const result = await pdfParse(buffer);
-      return result.text;
-    } catch {
+      const pdf = new PDFParse(new Uint8Array(buffer));
+      await pdf.load();
+      const result = await pdf.getText();
+      const text = (result as any).pages?.map((p: any) => p.text || "").join("\n") || "";
+      pdf.destroy();
+      console.log("[DOC-SIMPLIFY] PDF extracted, text length:", text.length);
+      if (text.length > 0) return text;
+      return buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    } catch (err) {
+      console.error("[DOC-SIMPLIFY] PDF parse error:", err);
       return buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     }
   }
