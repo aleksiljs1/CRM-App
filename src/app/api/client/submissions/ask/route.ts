@@ -146,7 +146,9 @@ Client's question: "${question}"
 
 Answer helpfully. Explain what this document is, what it should contain, how to obtain it, and any specific requirements for Albanian law/processes. If they uploaded a file, comment on whether it looks correct.
 Be friendly, professional, and specific to Albanian legal/business context.
-Keep answers concise but thorough.`;
+Keep answers concise but thorough.
+
+IMPORTANT: Do NOT use markdown formatting like **, *, #, or bullet points with *. Use plain text only. Use numbered lists (1. 2. 3.) or dashes (-) for lists. No bold, no italic, no headers. The output is displayed as plain text.`;
 
     const answer = await askGemini(prompt);
 

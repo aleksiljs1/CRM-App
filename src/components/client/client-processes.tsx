@@ -333,6 +333,7 @@ export function ClientProcessesSection({
 }: {
   processes: ProcessStatus[];
 }) {
+  const [localProcesses, setLocalProcesses] = useState<ProcessStatus[]>(processes);
   const [uploading, setUploading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<
     Record<string, { complete: boolean; missing: string[]; matched: string[] }>
@@ -371,6 +372,20 @@ export function ClientProcessesSection({
       const data = await res.json();
       if (data.validation) {
         setFeedback((prev) => ({ ...prev, [processId]: data.validation }));
+        // Update local process data to reflect new upload counts
+        setLocalProcesses((prev) =>
+          prev.map((p) =>
+            p.id === processId
+              ? {
+                  ...p,
+                  uploadedCount: p.totalRequired - (data.validation.missing?.length || 0),
+                  missingDocs: data.validation.missing || [],
+                  submissionId: data.submission?.id || p.submissionId,
+                }
+              : p
+          )
+        );
+        toast.success(`${files.length} file(s) uploaded. AI matched them to requirements.`);
       }
     } catch {
       toast.error("Upload failed. Please try again.");
@@ -424,7 +439,7 @@ export function ClientProcessesSection({
         className="hidden"
       />
 
-      {processes.map((proc) => {
+      {localProcesses.map((proc) => {
         const fb = feedback[proc.id];
         const missingList = fb ? fb.missing : proc.missingDocs;
         const matchedCount = fb ? fb.matched.length : proc.uploadedCount;

@@ -87,7 +87,7 @@ export default function LegalProcessesPage() {
 
   async function fetchClients() {
     try {
-      const res = await fetch("/api/clients");
+      const res = await fetch("/api/clients?all=true");
       if (!res.ok) return;
       const data = await res.json();
       setClients(data.clients || []);

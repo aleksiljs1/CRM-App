@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     const where: any = {};
 
     // Department-based filtering
-    if (!isAdminOrPartner) {
+    const showAll = searchParams.get("all") === "true";
+    if (!isAdminOrPartner && !showAll) {
       if (userRole === "MANAGER") {
         // MANAGER: see clients where assignedTo user is in their department
         where.assignedTo = { department: userDept };

@@ -138,95 +138,104 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create SubmittedDocument records
-    await prisma.submittedDocument.createMany({
-      data: savedDocs.map((doc) => ({
-        submissionId: submission!.id,
-        fileName: doc.fileName,
-        filePath: doc.filePath,
-        fileSize: doc.fileSize,
-      })),
-    });
-
-    // AI validation: compare uploaded file names against required CLIENT documents
-    const requiredDocNames = processType.requiredDocuments.map(
-      (d) => d.documentName
-    );
-    const uploadedFileNames = [
-      ...savedDocs.map((d) => d.fileName),
-    ];
-
-    // Also get previously uploaded docs for this submission
-    const allDocs = await prisma.submittedDocument.findMany({
-      where: { submissionId: submission.id },
-      select: { fileName: true },
-    });
-    const allUploadedNames = allDocs.map((d) => d.fileName);
-
-    let validation = {
-      complete: false,
-      missing: requiredDocNames,
-      matched: [] as string[],
-    };
-
-    try {
-      const prompt = `You are a legal document validator. Compare the uploaded document file names against the required documents for a "${processType.name}" process.
-
-Required CLIENT documents:
-${requiredDocNames.map((n, i) => `${i + 1}. ${n}`).join("\n")}
-
-Uploaded file names:
-${allUploadedNames.map((n, i) => `${i + 1}. ${n}`).join("\n")}
-
-For each required document, determine if any uploaded file likely matches it (by name similarity or content type inference).
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "complete": true/false,
-  "matched": ["list of required doc names that have a matching upload"],
-  "missing": ["list of required doc names that are NOT yet uploaded"]
-}`;
-
-      const aiResponse = await askGemini(prompt);
-      const cleaned = aiResponse
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      const parsed = JSON.parse(cleaned);
-      validation = {
-        complete: parsed.complete ?? false,
-        matched: parsed.matched ?? [],
-        missing: parsed.missing ?? requiredDocNames,
-      };
-    } catch {
-      // If AI fails, do basic matching
-      const matchedNames: string[] = [];
-      const missingNames: string[] = [];
-      for (const reqName of requiredDocNames) {
-        const found = allUploadedNames.some(
-          (u) =>
-            u.toLowerCase().includes(reqName.toLowerCase().split(" ")[0]) ||
-            reqName.toLowerCase().includes(u.toLowerCase().split(".")[0])
-        );
-        if (found) {
-          matchedNames.push(reqName);
+    // Build file info with first-page text for AI matching
+    const fileInfoForAI: { fileName: string; filePath: string; fileSize: number; firstPageText: string }[] = [];
+    for (const doc of savedDocs) {
+      let firstPageText = "";
+      try {
+        const fullPath = path.join(process.cwd(), "public", doc.filePath);
+        const buffer = await import("node:fs/promises").then(fs => fs.readFile(fullPath));
+        if (doc.fileName.toLowerCase().endsWith(".pdf")) {
+          const { PDFParse } = await import("pdf-parse");
+          const pdf = new PDFParse(new Uint8Array(buffer));
+          await pdf.load();
+          const result = await pdf.getText();
+          firstPageText = ((result as any).pages?.[0]?.text || "").slice(0, 500);
+          pdf.destroy();
         } else {
-          missingNames.push(reqName);
+          firstPageText = buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
         }
+      } catch {
+        firstPageText = "";
       }
-      validation = {
-        complete: missingNames.length === 0,
-        matched: matchedNames,
-        missing: missingNames,
-      };
+      fileInfoForAI.push({ ...doc, firstPageText });
     }
 
-    // Update submission status based on validation
-    const newStatus = validation.complete ? "COMPLETE" : "INCOMPLETE";
+    // AI matching: ask AI to assign each uploaded file to a required document
+    const requiredDocs = processType.requiredDocuments;
+    const requiredDocNames = requiredDocs.map(d => d.documentName);
+
+    // Get previously uploaded docs
+    const previousDocs = await prisma.submittedDocument.findMany({
+      where: { submissionId: submission.id },
+      select: { fileName: true, aiMatchedToId: true },
+    });
+
+    let matchResults: { fileName: string; matchedRequiredDocId: string | null; confidence: number }[] = [];
+
+    try {
+      const prompt = `You are a legal document classifier for a "${processType.name}" process at Kreston Albania.
+
+Required CLIENT documents (with IDs):
+${requiredDocs.map(d => `- ID: "${d.id}" | Name: "${d.documentName}" | Description: "${d.description || ""}"`).join("\n")}
+
+Newly uploaded files:
+${fileInfoForAI.map(f => `- File: "${f.fileName}"${f.firstPageText ? ` | Content preview: "${f.firstPageText}"` : ""}`).join("\n")}
+
+Previously uploaded files already matched:
+${previousDocs.filter(d => d.aiMatchedToId).map(d => `- "${d.fileName}" -> matched to ${d.aiMatchedToId}`).join("\n") || "None"}
+
+For each NEWLY uploaded file, decide which required document it best matches. Use the filename AND content preview to decide. If a required document is already matched by a previous upload, the new file can still match it (as an update/replacement).
+
+Return ONLY a JSON array:
+[{"fileName": "exact_filename.pdf", "matchedRequiredDocId": "the_id_or_null", "confidence": 0.95}]`;
+
+      const aiResponse = await askGemini(prompt);
+      const cleaned = aiResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      matchResults = JSON.parse(cleaned);
+    } catch {
+      // Fallback: try basic name matching
+      matchResults = fileInfoForAI.map(f => {
+        const match = requiredDocs.find(d =>
+          f.fileName.toLowerCase().includes(d.documentName.toLowerCase().split(" ")[0].toLowerCase()) ||
+          d.documentName.toLowerCase().includes(f.fileName.toLowerCase().split(".")[0])
+        );
+        return { fileName: f.fileName, matchedRequiredDocId: match?.id || null, confidence: match ? 0.6 : 0 };
+      });
+    }
+
+    // Create SubmittedDocument records with AI matching
+    for (const doc of fileInfoForAI) {
+      const match = matchResults.find(m => m.fileName === doc.fileName);
+      await prisma.submittedDocument.create({
+        data: {
+          submissionId: submission!.id,
+          fileName: doc.fileName,
+          filePath: doc.filePath,
+          fileSize: doc.fileSize,
+          firstPageText: doc.firstPageText || null,
+          aiMatchedToId: match?.matchedRequiredDocId || null,
+          aiConfidence: match?.confidence || null,
+        },
+      });
+    }
+
+    // Recalculate validation status
+    const allSubmittedDocs = await prisma.submittedDocument.findMany({
+      where: { submissionId: submission.id },
+    });
+    const matchedRequiredIds = new Set(allSubmittedDocs.filter(d => d.aiMatchedToId).map(d => d.aiMatchedToId));
+    const matched = requiredDocs.filter(d => matchedRequiredIds.has(d.id)).map(d => d.documentName);
+    const missing = requiredDocs.filter(d => !matchedRequiredIds.has(d.id)).map(d => d.documentName);
+    const complete = missing.length === 0;
+
+    const validation = { complete, matched, missing };
+
+    // Update submission status
     await prisma.clientSubmission.update({
       where: { id: submission.id },
       data: {
-        status: newStatus,
+        status: complete ? "COMPLETE" : "INCOMPLETE",
         aiValidation: validation,
       },
     });
