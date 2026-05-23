@@ -36,6 +36,7 @@ interface TaskUser {
   name: string;
   email: string;
   role: string;
+  avatar?: string | null;
 }
 
 interface TaskClient {
@@ -290,13 +291,22 @@ function TaskCard({
           )}
           <span
             title={assigneeName}
-            className={`inline-flex size-6 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-[10px] font-semibold ${
+            className={`inline-flex size-6 items-center justify-center overflow-hidden rounded-full text-[10px] font-semibold ${
               task.status === "REVIEW" && !task.assignedTo
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                : ""
+                : "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
             }`}
           >
-            {assigneeInitials}
+            {task.assignedTo?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={task.assignedTo.avatar}
+                alt={assigneeName}
+                className="size-full object-cover"
+              />
+            ) : (
+              assigneeInitials
+            )}
           </span>
         </div>
       </div>

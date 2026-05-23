@@ -575,7 +575,7 @@ function TaskDetailModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
             <div>
               <span className="text-muted-foreground">Priority</span>
               <div className="mt-0.5">
@@ -972,7 +972,7 @@ function AdminNewTaskForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground/80 mb-1 block">
                   Priority
@@ -1245,15 +1245,15 @@ export default function AdminTasksPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Admin Tasks</h1>
+          <h1 className="text-lg font-bold md:text-2xl">Admin Tasks</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             View and manage tasks across all departments
           </p>
         </div>
         <Button
-          className="bg-brand-600 hover:bg-brand-700 text-white"
+          className="w-full bg-brand-600 hover:bg-brand-700 text-white md:w-auto"
           onClick={() => setShowNewForm(true)}
         >
           <Plus className="w-4 h-4 mr-1" />
@@ -1319,7 +1319,8 @@ export default function AdminTasksPage() {
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-5 gap-3 min-h-[60vh]">
+      <div className="-mx-3 overflow-x-auto sm:mx-0">
+        <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[900px] px-3 sm:min-w-0 sm:px-0">
         {STATUSES.map((status) => {
           const config = STATUS_CONFIG[status];
           const statusTasks = tasksByStatus(status);
@@ -1358,6 +1359,7 @@ export default function AdminTasksPage() {
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* Modals */}

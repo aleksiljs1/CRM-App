@@ -56,7 +56,7 @@ function InsightCard({
 }) {
   return (
     <div
-      className={`rounded-xl border bg-card shadow-sm border-t-4 ${accent} p-6`}
+      className={`rounded-xl border bg-card shadow-sm border-t-4 ${accent} p-4 md:p-6`}
     >
       <p className="text-[30px] font-bold tabular-nums leading-none text-foreground">
         {value}
@@ -111,7 +111,7 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
+      className="group flex items-center gap-4 rounded-xl border bg-card p-3 md:p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
         <Icon className="size-5" />
@@ -242,7 +242,7 @@ export default async function PartnerDashboardPage() {
       <section>
         <SectionLabel icon={LineChart}>Trends</SectionLabel>
         <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="rounded-xl border bg-card p-3 md:p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
@@ -261,7 +261,7 @@ export default async function PartnerDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
+          <div className="rounded-xl border bg-card p-3 md:p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">

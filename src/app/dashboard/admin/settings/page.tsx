@@ -237,7 +237,7 @@ export default async function SystemSettingsPage() {
         <SectionLabel icon={Building2}>Department Overview</SectionLabel>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">

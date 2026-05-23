@@ -397,9 +397,9 @@ export default function AdminClientsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-3 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
             Client Management
@@ -411,7 +411,7 @@ export default function AdminClientsPage() {
           </p>
         </div>
         <Button
-          className="gap-2 bg-brand-600 text-white hover:bg-brand-700"
+          className="w-full gap-2 bg-brand-600 text-white hover:bg-brand-700 md:w-auto"
           onClick={() => {
             setEditingClient(null);
             setModalOpen(true);
@@ -423,8 +423,8 @@ export default function AdminClientsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative max-w-xs flex-1">
+      <div className="flex flex-col flex-wrap items-stretch gap-3 md:flex-row md:items-center">
+        <div className="relative w-full md:max-w-xs md:flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search company or contact..."
@@ -436,7 +436,7 @@ export default function AdminClientsPage() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500 md:w-auto"
         >
           <option value="">All Statuses</option>
           {STATUS_OPTIONS.map((s) => (
@@ -448,7 +448,7 @@ export default function AdminClientsPage() {
         <select
           value={filterIndustry}
           onChange={(e) => setFilterIndustry(e.target.value)}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-brand-500 md:w-auto"
         >
           <option value="">All Industries</option>
           {industries.map((ind) => (
@@ -475,7 +475,7 @@ export default function AdminClientsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">

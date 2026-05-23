@@ -31,10 +31,10 @@ export async function GET(
       where: { id },
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },
@@ -276,10 +276,10 @@ export async function PATCH(
       data,
       include: {
         assignedTo: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         createdBy: {
-          select: { id: true, name: true, email: true, role: true },
+          select: { id: true, name: true, email: true, role: true, avatar: true },
         },
         client: {
           select: { id: true, companyName: true },

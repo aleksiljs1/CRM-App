@@ -229,7 +229,7 @@ export default function AuditLogPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
@@ -318,7 +318,7 @@ export default function AuditLogPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t px-4 py-3">
+            <div className="flex flex-col gap-2 border-t px-4 py-3 md:flex-row md:items-center md:justify-between">
               <p className="text-xs text-muted-foreground">
                 Page {page} of {totalPages} &middot; {total} entries
               </p>
