@@ -703,7 +703,7 @@ export function ChatPopup() {
                                   }`}
                                 >
                                   <FileText className="h-3 w-3" />
-                                  <span className="max-w-[80px] truncate">
+                                  <span className="max-w-[160px] truncate md:max-w-[80px]">
                                     {att.fileName}
                                   </span>
                                   <a
@@ -752,7 +752,7 @@ export function ChatPopup() {
                       className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-[10px]"
                     >
                       <Paperclip className="h-2.5 w-2.5" />
-                      <span className="max-w-[80px] truncate">{file.name}</span>
+                      <span className="max-w-[160px] truncate md:max-w-[80px]">{file.name}</span>
                       <button
                         onClick={() =>
                           setInputAttachments((prev) => ({

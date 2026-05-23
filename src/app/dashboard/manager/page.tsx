@@ -560,12 +560,12 @@ export default async function ManagerDashboardPage() {
 
           {departmentWorkload.length > 0 ? (
             <div className="overflow-x-auto">
-              <div className="min-w-[480px]">
-              <div className="grid grid-cols-4 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="min-w-[280px] md:min-w-[480px]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Department</span>
-                <span className="text-center">Staff</span>
+                <span className="hidden md:block text-center">Staff</span>
                 <span className="text-center">Open tasks</span>
-                <span className="text-center">Ratio</span>
+                <span className="hidden md:block text-center">Ratio</span>
               </div>
               <ul className="divide-y">
                 {departmentWorkload.map((d) => {
@@ -578,18 +578,18 @@ export default async function ManagerDashboardPage() {
                   return (
                     <li
                       key={d.dept}
-                      className="grid grid-cols-4 items-center gap-2 px-5 py-3 text-sm transition-colors hover:bg-muted/40"
+                      className="grid grid-cols-2 md:grid-cols-4 items-center gap-2 px-5 py-3 text-sm transition-colors hover:bg-muted/40"
                     >
                       <span className="font-medium text-foreground">
                         {d.label}
                       </span>
-                      <span className="text-center text-muted-foreground tabular-nums">
+                      <span className="hidden md:block text-center text-muted-foreground tabular-nums">
                         {d.employees}
                       </span>
                       <span className="text-center text-muted-foreground tabular-nums">
                         {d.tasks}
                       </span>
-                      <span className="flex justify-center">
+                      <span className="hidden md:flex justify-center">
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${ratioColor}`}
                         >
@@ -625,18 +625,18 @@ export default async function ManagerDashboardPage() {
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
           {upcomingDeadlines.length > 0 ? (
             <div className="overflow-x-auto">
-              <div className="min-w-[640px]">
-              <div className="grid grid-cols-5 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="min-w-[360px] md:min-w-[640px]">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2 border-b px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span className="col-span-2">Task</span>
-                <span>Assigned to</span>
-                <span>Department</span>
+                <span className="hidden md:block">Assigned to</span>
+                <span className="hidden md:block">Department</span>
                 <span className="text-right">Deadline</span>
               </div>
               <ul className="divide-y">
                 {upcomingDeadlines.map((task) => (
                   <li
                     key={task.id}
-                    className="grid grid-cols-5 items-center gap-2 px-5 py-3 text-sm transition-colors hover:bg-muted/40"
+                    className="grid grid-cols-3 md:grid-cols-5 items-center gap-2 px-5 py-3 text-sm transition-colors hover:bg-muted/40"
                   >
                     <div className="col-span-2 flex min-w-0 items-center gap-2">
                       <Clock className="size-3.5 shrink-0 text-muted-foreground" />
@@ -649,10 +649,10 @@ export default async function ManagerDashboardPage() {
                         {task.priority}
                       </Badge>
                     </div>
-                    <span className="truncate text-muted-foreground">
+                    <span className="hidden md:block truncate text-muted-foreground">
                       {task.assignedTo?.name ?? "Unassigned"}
                     </span>
-                    <span className="truncate text-muted-foreground">
+                    <span className="hidden md:block truncate text-muted-foreground">
                       {DEPT_LABELS[task.department ?? ""] ?? "—"}
                     </span>
                     <span className="text-right font-medium text-foreground tabular-nums">

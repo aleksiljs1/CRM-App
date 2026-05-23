@@ -512,7 +512,7 @@ export default function ProcessManagementPage() {
       {/* Add/Edit Process Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-xl mx-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border bg-card p-6 shadow-xl mx-3 md:mx-0">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-foreground">
                 {editingProcess ? "Edit Process Type" : "Add Process Type"}

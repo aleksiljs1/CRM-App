@@ -863,7 +863,7 @@ export default function HREmailsPage() {
       {/* ====== Compose Modal ====== */}
       {showCompose && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-background rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col mx-3 md:mx-0">
             {/* Sticky header */}
             <div className="flex items-center justify-between p-6 pb-3 shrink-0 border-b">
               <h2 className="text-lg font-bold flex items-center gap-2">

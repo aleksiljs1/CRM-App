@@ -229,7 +229,7 @@ export default function AuditLogPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-sm">
+              <table className="w-full min-w-[420px] md:min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
@@ -241,13 +241,13 @@ export default function AuditLogPage() {
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
                       Action
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    <th className="hidden md:table-cell px-4 py-3 text-left font-semibold text-muted-foreground">
                       Entity
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    <th className="hidden md:table-cell px-4 py-3 text-left font-semibold text-muted-foreground">
                       Entity ID
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                    <th className="hidden md:table-cell px-4 py-3 text-left font-semibold text-muted-foreground">
                       Details
                     </th>
                   </tr>
@@ -273,15 +273,15 @@ export default function AuditLogPage() {
                             {log.action}
                           </span>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
+                        <td className="hidden md:table-cell px-4 py-3 whitespace-nowrap">
                           <Badge variant="outline">{log.entity}</Badge>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
+                        <td className="hidden md:table-cell px-4 py-3 whitespace-nowrap font-mono text-xs text-muted-foreground">
                           {log.entityId.length > 12
                             ? `${log.entityId.slice(0, 12)}...`
                             : log.entityId}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden md:table-cell px-4 py-3">
                           {log.details ? (
                             <button
                               onClick={() =>

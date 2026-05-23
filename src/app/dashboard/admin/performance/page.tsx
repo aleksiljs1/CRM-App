@@ -157,25 +157,25 @@ export default function AdminPerformancePage() {
         </div>
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[420px] md:min-w-[760px] text-left text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 font-medium text-muted-foreground">
                     Department
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-center font-medium text-muted-foreground">
                     Employees
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Open
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-center font-medium text-muted-foreground">
                     Completed
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Completion %
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-center font-medium text-muted-foreground">
                     Avg/Employee
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
@@ -192,13 +192,13 @@ export default function AdminPerformancePage() {
                     <td className="px-4 py-3 font-medium text-foreground">
                       {d.label}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground">
                       {d.employeeCount}
                     </td>
                     <td className="px-4 py-3 text-center text-muted-foreground">
                       {d.openTasks}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground">
                       {d.completedTasks}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -208,7 +208,7 @@ export default function AdminPerformancePage() {
                         {d.completionRate}%
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground">
                       {d.avgTasksPerEmployee}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -248,7 +248,7 @@ export default function AdminPerformancePage() {
         </div>
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[420px] md:min-w-[820px] text-left text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 font-medium text-muted-foreground">
@@ -257,10 +257,10 @@ export default function AdminPerformancePage() {
                   <th className="px-4 py-3 font-medium text-muted-foreground">
                     Name
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 font-medium text-muted-foreground">
                     Department
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 font-medium text-muted-foreground">
                     Role
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
@@ -269,7 +269,7 @@ export default function AdminPerformancePage() {
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     Completion %
                   </th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-center font-medium text-muted-foreground">
                     On-Time %
                   </th>
                 </tr>
@@ -293,10 +293,10 @@ export default function AdminPerformancePage() {
                         {p.user.email}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {p.user.department || "-"}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3">
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {p.user.role}
                       </span>
@@ -311,7 +311,7 @@ export default function AdminPerformancePage() {
                     <td className="px-4 py-3 text-center text-muted-foreground">
                       {p.completionRate}%
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground">
                       {p.onTimeRate}%
                     </td>
                   </tr>
@@ -405,16 +405,16 @@ export default function AdminPerformancePage() {
         </div>
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[420px] md:min-w-[720px] text-left text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 font-medium text-muted-foreground">
                     Task
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 font-medium text-muted-foreground">
                     Department
                   </th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 font-medium text-muted-foreground">
                     Assigned To
                   </th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">
@@ -434,10 +434,10 @@ export default function AdminPerformancePage() {
                     <td className="px-4 py-3 font-medium text-foreground max-w-[250px] truncate">
                       {t.title}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {t.departmentLabel}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {t.assignedTo}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">

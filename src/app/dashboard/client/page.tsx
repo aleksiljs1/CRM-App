@@ -212,7 +212,7 @@ const displayName =
       {/* Overview — 4 real metrics */}
       <section>
         <SectionLabel icon={Sparkles}>Overview</SectionLabel>
-        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           <InsightCard
             accent="border-t-brand-500"
             value={activeSubmissions}

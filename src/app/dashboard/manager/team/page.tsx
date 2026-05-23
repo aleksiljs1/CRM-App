@@ -347,7 +347,7 @@ function TaskHistoryPanel({ userId }: { userId: string }) {
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs text-muted-foreground font-medium">View Tasks:</span>
-        <div className="flex rounded-md border border-border bg-muted/50 p-0.5">
+        <div className="flex flex-col sm:flex-row rounded-md border border-border bg-muted/50 p-0.5">
           {(["day", "week", "month"] as Period[]).map((p) => (
             <button
               key={p}

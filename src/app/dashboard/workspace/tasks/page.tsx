@@ -584,7 +584,7 @@ function TaskDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col mx-3 md:mx-0">
         {/* Sticky header */}
         <div className="flex items-start justify-between p-6 pb-0 shrink-0">
           <h2 className="text-lg font-bold pr-4">{task.title}</h2>
@@ -1592,7 +1592,7 @@ export default function HRTasksPage() {
       {/* Kanban Board */}
       {viewFilter === "ALL" ? (
         <div className="-mx-3 sm:mx-0 overflow-x-auto md:overflow-x-visible">
-          <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[1000px] md:min-w-0 px-3 sm:px-0">
+          <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[640px] md:min-w-[1000px] px-3 sm:px-0">
             {STATUSES.map((status) => {
               const config = STATUS_CONFIG[status];
               const statusTasks = tasksByStatus(status);

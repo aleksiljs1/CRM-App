@@ -206,7 +206,7 @@ export default async function PartnerDashboardPage() {
       {/* ── Section 2 — Platform overview strip ─────────────────────── */}
       <section>
         <SectionLabel icon={Activity}>Platform</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           <SmallStat
             icon={Activity}
             iconBg="bg-cyan-100 dark:bg-cyan-900/40"

@@ -811,7 +811,7 @@ export default function HRDocumentsPage() {
       {/* ─── Ask AI Modal ──────────────────────────────────────────────────── */}
       {askModalDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl">
+          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl mx-3 md:mx-0">
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
@@ -904,7 +904,7 @@ export default function HRDocumentsPage() {
       {/* ─── Simplify Modal ────────────────────────────────────────────────── */}
       {simplifyModalDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl">
+          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl mx-3 md:mx-0">
             <div className="flex items-center justify-between border-b border-border px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">

@@ -1340,7 +1340,7 @@ export default function AdminTasksPage() {
 
       {/* Kanban Board */}
       <div className="-mx-3 overflow-x-auto sm:mx-0">
-        <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[900px] px-3 sm:min-w-0 sm:px-0">
+        <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[640px] px-3 sm:min-w-0 sm:px-0">
         {STATUSES.map((status) => {
           const config = STATUS_CONFIG[status];
           const statusTasks = tasksByStatus(status);

@@ -465,7 +465,7 @@ export default function AdminClientsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full min-w-[420px] md:min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -474,13 +474,13 @@ export default function AdminClientsPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Contact
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Email
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Phone
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Industry
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -506,13 +506,13 @@ export default function AdminClientsPage() {
                     <td className="px-4 py-3 text-muted-foreground">
                       {client.contactName}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {client.contactEmail}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {client.phone || "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {client.industry || "\u2014"}
                     </td>
                     <td className="px-4 py-3">

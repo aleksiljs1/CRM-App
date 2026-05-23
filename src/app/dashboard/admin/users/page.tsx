@@ -503,22 +503,22 @@ export default function AdminUsersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] text-sm">
+            <table className="w-full min-w-[420px] md:min-w-[880px] text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Email
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Sub-role
                   </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-muted-foreground">
                     Department
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -538,7 +538,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 font-medium text-foreground">
                       {user.name}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {user.email}
                     </td>
                     <td className="px-4 py-3">
@@ -549,10 +549,10 @@ export default function AdminUsersPage() {
                         {user.role}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {user.subRole || "\u2014"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                       {user.department
                         ? DEPT_LABELS[user.department] || user.department
                         : "\u2014"}
