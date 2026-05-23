@@ -36,6 +36,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: string[];
+  departments?: string[];
 }
 
 const navItems: NavItem[] = [
@@ -115,7 +116,8 @@ const navItems: NavItem[] = [
     label: "Processes",
     href: "/dashboard/hr/processes",
     icon: FolderOpen,
-    roles: ["MANAGER"],
+    roles: ["ADMIN", "MANAGER"],
+    departments: ["LEGAL"],
   },
   {
     label: "Emails",
@@ -217,9 +219,16 @@ export function AppSidebar() {
   const avatar =
     avatarOverride !== undefined ? avatarOverride : session?.user?.avatar ?? null;
 
-  const filteredItems = navItems.filter(
-    (item) => !item.roles || (userRole && item.roles.includes(userRole))
-  );
+  const userDepartment = session?.user?.department;
+  const filteredItems = navItems.filter((item) => {
+    // Role check
+    if (item.roles && (!userRole || !item.roles.includes(userRole))) return false;
+    // Department check - ADMIN sees everything, others must match
+    if (item.departments && userRole !== "ADMIN") {
+      if (!userDepartment || !item.departments.includes(userDepartment)) return false;
+    }
+    return true;
+  });
 
   const sidebarBg = SIDEBAR_BG_BY_ROLE[userRole || ""] ?? "bg-card";
 
