@@ -222,6 +222,10 @@ export function AppSidebar() {
 
   const sidebarBg = SIDEBAR_BG_BY_ROLE[userRole || ""] ?? "bg-card";
 
+  // CLIENT-only: tracks whether the "Talk to your team" panel is expanded.
+  // When expanded the sidebar widens from w-64 to w-80 to fit names + context.
+  const [chatExpanded, setChatExpanded] = useState(false);
+
   // Mobile drawer state — opened via window event dispatched by the header
   // hamburger button. Desktop (md+) layout is unaffected because the aside
   // is always visible at md+ via `md:static md:flex md:translate-x-0`.
@@ -262,10 +266,9 @@ export function AppSidebar() {
 
       <aside
         className={cn(
-          "flex h-full flex-col border-r border-border",
-          // CLIENT role gets a wider sidebar because it hosts the persistent
-          // "Talk to your team" panel — needs room for names + context.
-          userRole === "CLIENT" ? "w-80" : "w-64",
+          "flex h-full flex-col border-r border-border transition-[width] duration-200 ease-out",
+          // CLIENT role widens only when the team chat panel is expanded.
+          userRole === "CLIENT" && chatExpanded ? "w-80" : "w-64",
           // Mobile: fixed overlay drawer, slides in from the left.
           // Desktop (md+): restore the original static, always-visible layout.
           "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out",
@@ -320,11 +323,15 @@ export function AppSidebar() {
           );
         })}
 
-        {/* CLIENT-only: persistent "Talk to your team" panel. The CLIENT role
-            has no nav items above, so this fills the sidebar's scrollable area. */}
+        {/* CLIENT-only: persistent "Talk to your team" panel. Collapsed by
+            default — clicking the header expands the contact list AND widens
+            the sidebar to w-80 so names + context fit. */}
         {userRole === "CLIENT" && (
           <div className="pt-1">
-            <TeamChatSection />
+            <TeamChatSection
+              expanded={chatExpanded}
+              onToggle={() => setChatExpanded((v) => !v)}
+            />
           </div>
         )}
       </nav>

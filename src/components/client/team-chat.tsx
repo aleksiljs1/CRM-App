@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ChevronDown,
+  ChevronRight,
   Loader2,
   MessageSquare,
   Send,
@@ -62,10 +64,29 @@ function timeShort(date: string): string {
 
 // ── Outer section: header + contact cards + modal mount ─────────────────────
 
-export function TeamChatSection() {
+interface TeamChatSectionProps {
+  /** Controlled expanded state. When true, the contact list is shown. */
+  expanded?: boolean;
+  /** Called when the user clicks the header to toggle. */
+  onToggle?: () => void;
+}
+
+export function TeamChatSection({
+  expanded: expandedProp,
+  onToggle,
+}: TeamChatSectionProps = {}) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
+  // If no controlled prop is passed we fall back to internal state so the
+  // component still works standalone.
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isControlled = expandedProp !== undefined;
+  const expanded = isControlled ? expandedProp : internalExpanded;
+  const handleToggle = () => {
+    if (onToggle) onToggle();
+    if (!isControlled) setInternalExpanded((v) => !v);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -87,14 +108,26 @@ export function TeamChatSection() {
 
   return (
     <section>
-      <div className="flex items-center gap-1.5">
-        <Users className="size-3 text-muted-foreground" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          Talk to your team
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-1.5 rounded-md p-1.5 transition-colors hover:bg-muted/50"
+      >
+        <span className="flex items-center gap-1.5">
+          <Users className="size-3 text-muted-foreground" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Talk to your team
+          </span>
         </span>
-      </div>
+        {expanded ? (
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+        )}
+      </button>
 
-      {loading ? (
+      {!expanded ? null : loading ? (
         <div className="mt-3 flex items-center justify-center rounded-xl border bg-card py-6 shadow-sm">
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         </div>
