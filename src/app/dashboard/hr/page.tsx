@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   Mail,
-  Users,
   CheckSquare,
   FileText,
   Award,
@@ -16,6 +15,7 @@ import {
   Gauge,
   CheckCircle2,
   LineChart,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import {
   EmailsAreaChart,
   TasksAreaChart,
 } from "@/components/dashboard/activity-charts";
+import { getPerformanceData } from "@/app/api/performance/route";
 
 function getDeptName(dept: string | null): string {
   const map: Record<string, string> = {
@@ -214,6 +215,108 @@ function QuickAction({
   );
 }
 
+function ScoreCard({
+  score,
+  rank,
+  totalEmployees,
+}: {
+  score: number;
+  rank: number | null;
+  totalEmployees: number;
+}) {
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  const safeScore = Math.max(0, Math.min(100, score));
+  const progress = (safeScore / 100) * circumference;
+
+  const scoreColor =
+    safeScore >= 80
+      ? "text-emerald-600 dark:text-emerald-400"
+      : safeScore >= 60
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-red-600 dark:text-red-400";
+
+  return (
+    <div className="flex h-full flex-col rounded-xl border bg-card p-6 shadow-sm">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        Performance
+      </span>
+
+      <div className="flex flex-1 flex-col items-center justify-center pt-2">
+        <div className="relative flex items-center justify-center">
+          <svg
+            width="180"
+            height="180"
+            viewBox="0 0 180 180"
+            className="-rotate-90"
+          >
+            <defs>
+              <linearGradient
+                id="hrScoreGradient"
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="1"
+              >
+                <stop offset="0%" stopColor="var(--color-brand-400)" />
+                <stop offset="100%" stopColor="var(--color-brand-600)" />
+              </linearGradient>
+            </defs>
+
+            {/* Track */}
+            <circle
+              cx="90"
+              cy="90"
+              r={radius}
+              fill="none"
+              stroke="var(--color-border)"
+              strokeOpacity="0.6"
+              strokeWidth="10"
+            />
+
+            {/* Progress */}
+            <circle
+              cx="90"
+              cy="90"
+              r={radius}
+              fill="none"
+              stroke="url(#hrScoreGradient)"
+              strokeWidth="10"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference - progress}
+              className="transition-all duration-[1200ms] ease-out"
+            />
+          </svg>
+
+          <div className="absolute flex flex-col items-center">
+            <span
+              className={`text-5xl font-bold tabular-nums tracking-tight ${scoreColor}`}
+            >
+              {safeScore}
+            </span>
+            <span className="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              out of 100
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-1.5">
+          <Trophy className="size-3.5 text-amber-500" />
+          {rank !== null ? (
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">#{rank}</span>{" "}
+              of {totalEmployees} employees
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Not ranked</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function HRDashboardPage() {
@@ -293,6 +396,26 @@ export default async function HRDashboardPage() {
     }),
   ]);
 
+  // Performance score (server-side, no HTTP round-trip).
+  // Wrapped in try/catch so a failure in performance computation doesn't break
+  // the dashboard — falls back to a "Not ranked" score card.
+  let myScore = 0;
+  let myRank: number | null = null;
+  let totalEmployees = 0;
+  try {
+    const allPerformance = await getPerformanceData();
+    totalEmployees = allPerformance.length;
+    const myIndex = allPerformance.findIndex(
+      (d) => d.user.id === session.user.id
+    );
+    if (myIndex >= 0) {
+      myScore = allPerformance[myIndex].performanceScore;
+      myRank = myIndex + 1;
+    }
+  } catch (err) {
+    console.error("Failed to load performance data for HR dashboard:", err);
+  }
+
   // Aggregate the two findMany results into ordered 14-day buckets.
   const trendDays = buildLast14Days();
   const emailsByDay = bucketByDay(
@@ -354,8 +477,8 @@ export default async function HRDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             {deptDisplayName} Dashboard
           </h1>
@@ -363,27 +486,39 @@ export default async function HRDashboardPage() {
             Overview of your workspace &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/hr/emails">
-          <Button className="gap-2">
-            <Mail className="size-4" />
-            View All Emails
-          </Button>
-        </Link>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
+          <Link href="/dashboard/hr/emails">
+            <Button className="gap-2">
+              <Mail className="size-4" />
+              View All Emails
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* ── Section 1 — Insights ──────────────────────────────────────── */}
+      {/* ── Section 1 — Insights + Performance score ──────────────────── */}
       <section>
         <SectionLabel icon={Sparkles}>Overview</SectionLabel>
-        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {insights.map((s) => (
-            <InsightCard
-              key={s.label}
-              accent={s.accent}
-              value={s.value}
-              label={s.label}
-              subtitle={s.subtitle}
-            />
-          ))}
+        <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-2">
+            {insights.map((s) => (
+              <InsightCard
+                key={s.label}
+                accent={s.accent}
+                value={s.value}
+                label={s.label}
+                subtitle={s.subtitle}
+              />
+            ))}
+          </div>
+          <ScoreCard
+            score={myScore}
+            rank={myRank}
+            totalEmployees={totalEmployees}
+          />
         </div>
       </section>
 

@@ -74,7 +74,7 @@ function InsightCard({
 }) {
   return (
     <div
-      className={`rounded-xl border bg-card shadow-sm border-t-4 ${accent} p-6`}
+      className={`rounded-xl border bg-card shadow-sm border-t-4 ${accent} p-4 md:p-6`}
     >
       <p className="text-[30px] font-bold tabular-nums leading-none text-foreground">
         {value}
@@ -190,7 +190,7 @@ export default async function ClientDashboardPage() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Page header */}
       <header>
         <h1 className="text-lg font-semibold tracking-tight text-brand-700">

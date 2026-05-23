@@ -198,7 +198,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             System Administration
@@ -207,8 +207,8 @@ export default async function AdminDashboardPage() {
             Firm-wide overview &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/admin">
-          <Button className="gap-2">
+        <Link href="/dashboard/admin" className="w-full md:w-auto">
+          <Button className="w-full gap-2 md:w-auto">
             <Users className="size-4" />
             Manage Users
           </Button>
@@ -404,7 +404,7 @@ export default async function AdminDashboardPage() {
                         {user.email}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
                       {user.department
                         ? DEPT_LABELS[user.department] ?? user.department
                         : "—"}

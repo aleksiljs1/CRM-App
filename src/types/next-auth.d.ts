@@ -11,7 +11,12 @@ declare module "next-auth" {
       role: string;
       subRole?: string | null;
       department: string | null;
+      avatar?: string | null;
     };
+  }
+
+  interface User {
+    avatar?: string | null;
   }
 }
 
@@ -21,5 +26,6 @@ declare module "next-auth/jwt" {
     role: string;
     subRole?: string | null;
     department: string | null;
+    avatar?: string | null;
   }
 }

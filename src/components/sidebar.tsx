@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -16,6 +17,8 @@ import {
   Settings,
   LogOut,
   Award,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -127,29 +130,98 @@ export function AppSidebar() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
 
+  // Local override so the avatar can update instantly after upload without
+  // waiting for the next session refresh. Listens for the custom event the
+  // profile page dispatches.
+  const [avatarOverride, setAvatarOverride] = useState<string | null | undefined>(
+    undefined
+  );
+  useEffect(() => {
+    function onAvatarUpdated(e: Event) {
+      const detail = (e as CustomEvent<{ avatar: string | null }>).detail;
+      setAvatarOverride(detail?.avatar ?? null);
+    }
+    window.addEventListener("profile:avatar-updated", onAvatarUpdated);
+    return () =>
+      window.removeEventListener("profile:avatar-updated", onAvatarUpdated);
+  }, []);
+
+  const avatar =
+    avatarOverride !== undefined ? avatarOverride : session?.user?.avatar ?? null;
+
   const filteredItems = navItems.filter(
     (item) => !item.roles || (userRole && item.roles.includes(userRole))
   );
 
   const sidebarBg = SIDEBAR_BG_BY_ROLE[userRole || ""] ?? "bg-card";
 
-  return (
-    <aside
-      className={cn(
-        "flex h-full w-64 flex-col border-r border-border",
-        sidebarBg
-      )}
-    >
-      {/* Brand */}
-      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-600">
-          <span className="text-sm font-bold text-white">K</span>
-        </div>
-        <span className="text-lg font-semibold text-foreground">Kreston CRM</span>
-      </div>
+  // Mobile drawer state — opened via window event dispatched by the header
+  // hamburger button. Desktop (md+) layout is unaffected because the aside
+  // is always visible at md+ via `md:static md:flex md:translate-x-0`.
+  const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => {
+    function onOpen() {
+      setMobileOpen(true);
+    }
+    window.addEventListener("sidebar:open", onOpen);
+    return () => window.removeEventListener("sidebar:open", onOpen);
+  }, []);
+  // Close the drawer on route change so the next page doesn't appear covered.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+  // Lock body scroll while the drawer is open on mobile.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (mobileOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [mobileOpen]);
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-4">
+  return (
+    <>
+      {/* Mobile backdrop — only present below md when drawer is open */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "flex h-full w-64 flex-col border-r border-border",
+          // Mobile: fixed overlay drawer, slides in from the left.
+          // Desktop (md+): restore the original static, always-visible layout.
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:static md:translate-x-0 md:transition-none",
+          sidebarBg
+        )}
+      >
+        {/* Brand */}
+        <div className="flex h-16 items-center gap-3 border-b border-border px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-600">
+            <span className="text-sm font-bold text-white">K</span>
+          </div>
+          <span className="text-lg font-semibold text-foreground">Kreston CRM</span>
+          {/* Mobile-only close button */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
         {filteredItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -182,19 +254,34 @@ export function AppSidebar() {
       {/* User section */}
       <div className="border-t border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/50">
-            <span className="text-xs font-medium text-brand-700 dark:text-brand-300">
-              {session?.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">
-              {session?.user?.name ?? "User"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {session?.user?.role ?? ""}
-            </p>
-          </div>
+          <Link
+            href="/dashboard/profile"
+            className="flex flex-1 min-w-0 items-center gap-3 rounded-md -m-1 p-1 hover:bg-muted transition-colors"
+            title="View profile"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/50 overflow-hidden">
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatar}
+                  alt={session?.user?.name ?? "User avatar"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-medium text-brand-700 dark:text-brand-300">
+                  {session?.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {session?.user?.name ?? "User"}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {session?.user?.subRole || session?.user?.role || ""}
+              </p>
+            </div>
+          </Link>
           <ThemeToggle />
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -205,6 +292,21 @@ export function AppSidebar() {
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
+  );
+}
+
+// Mobile hamburger button — placed in the dashboard header to open the
+// sidebar drawer. Hidden at md+ where the sidebar is always visible.
+export function MobileMenuButton() {
+  return (
+    <button
+      onClick={() => window.dispatchEvent(new Event("sidebar:open"))}
+      className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+      aria-label="Open menu"
+    >
+      <Menu className="h-5 w-5" />
+    </button>
   );
 }

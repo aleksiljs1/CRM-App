@@ -2,22 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Badge } from "@/components/ui/badge";
-
-function getDeptName(dept: string | null): string {
-  const map: Record<string, string> = {
-    AUDIT: "Audit & Advisory",
-    ACCOUNTING_TAX: "Accounting & Tax",
-    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
-    LEGAL: "Legal Advisory",
-    ADVISORY: "Advisory Services",
-    HR: "HR & Payroll",
-    MARKETING: "Marketing",
-    FINANCE: "Finance",
-  };
-  return dept ? map[dept] || dept : "Firm-Wide";
-}
 
 const tabs = [
   { label: "Overview", href: "/dashboard/hr" },
@@ -29,9 +13,6 @@ const tabs = [
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const dept = session?.user?.department || null;
-  const deptDisplayName = getDeptName(dept);
 
   return (
     <div>
@@ -55,11 +36,6 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
-        <div className="ml-auto pr-2 py-1.5">
-          <Badge variant="outline" className="text-xs bg-brand-100/70 text-brand-600 border-brand-500/30 dark:bg-brand-900/40 dark:text-brand-400">
-            {deptDisplayName}
-          </Badge>
-        </div>
       </nav>
       {children}
     </div>

@@ -150,7 +150,7 @@ export default async function PartnerDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             Firm Overview
@@ -159,8 +159,8 @@ export default async function PartnerDashboardPage() {
             Partner dashboard &middot; firm-wide performance &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/reports">
-          <Button className="gap-2">
+        <Link href="/dashboard/reports" className="w-full md:w-auto">
+          <Button className="w-full gap-2 md:w-auto">
             <BarChart3 className="size-4" />
             View Reports
           </Button>

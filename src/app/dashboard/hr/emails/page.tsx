@@ -354,13 +354,13 @@ export default function HREmailsPage() {
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* ------ Header ------ */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
             <Mail className="h-5 w-5 text-brand-600 dark:text-brand-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{deptDisplayName} Emails</h1>
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-2xl font-bold tracking-tight truncate">{deptDisplayName} Emails</h1>
             <p className="text-sm text-muted-foreground">
               {pagination.total} email{pagination.total !== 1 ? "s" : ""}
               {filter !== "all" ? ` (${filter})` : ""}
@@ -372,7 +372,7 @@ export default function HREmailsPage() {
           variant="outline"
           onClick={handlePrioritize}
           disabled={prioritizing}
-          className="gap-2"
+          className="gap-2 w-full md:w-auto"
         >
           {prioritizing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -384,8 +384,8 @@ export default function HREmailsPage() {
       </div>
 
       {/* ------ Filter tabs + Search ------ */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex gap-1 rounded-lg border bg-muted/40 p-1 overflow-x-auto">
           {(["all", "unread", "read", "unreplied", "replied", ...(orderedIds.length > 0 ? ["ordered" as const] : [])] as const).map((f) => (
             <button
               key={f}
@@ -405,22 +405,22 @@ export default function HREmailsPage() {
         </div>
 
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full md:w-auto">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search emails..."
-            className="h-9 w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="h-9 w-full md:w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
         </div>
       </div>
 
       {/* ------ Main split layout - INDEPENDENT scrolling ------ */}
-      <div className="flex flex-1 gap-4 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
         {/* ====== LEFT: Email list ====== */}
-        <Card className="flex w-[40%] min-w-[320px] flex-col overflow-hidden">
+        <Card className={`flex w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden ${selectedId ? "hidden md:flex" : "flex"}`}>
           {loadingEmails ? (
             <EmailListSkeleton />
           ) : emails.length === 0 ? (

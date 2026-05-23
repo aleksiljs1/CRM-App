@@ -552,7 +552,7 @@ export function ChatPopup() {
   if (activeChats.length === 0) return null;
 
   return (
-    <div className="fixed bottom-0 right-6 z-50 flex items-end gap-2">
+    <div className="fixed inset-x-2 bottom-0 z-50 flex flex-col items-stretch gap-2 md:inset-x-auto md:right-6 md:flex-row md:items-end">
       {activeChats.map((chat) => {
         const sending = sendingMap[chat.conversationId] || false;
         const messageText = inputTexts[chat.conversationId] || "";
@@ -573,10 +573,9 @@ export function ChatPopup() {
           return (
             <div
               key={chat.conversationId}
-              className={`flex items-center gap-2 rounded-t-lg bg-brand-600 px-3 py-2.5 text-white shadow-lg cursor-pointer select-none transition-all ${
+              className={`flex h-11 w-full items-center gap-2 rounded-t-lg bg-brand-600 px-3 py-2.5 text-white shadow-lg cursor-pointer select-none transition-all md:w-[280px] ${
                 chat.flash ? "animate-pulse" : ""
               }`}
-              style={{ width: 280, height: 44 }}
               onClick={() => expandChat(chat.conversationId)}
             >
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20">
@@ -616,8 +615,7 @@ export function ChatPopup() {
         return (
           <div
             key={chat.conversationId}
-            className="flex flex-col overflow-hidden rounded-t-lg border bg-card shadow-2xl"
-            style={{ width: 340, height: 480 }}
+            className="flex h-[70vh] w-full flex-col overflow-hidden rounded-t-lg border bg-card shadow-2xl md:h-[480px] md:w-[340px]"
           >
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between bg-brand-600 px-3 py-2.5 text-white">

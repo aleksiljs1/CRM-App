@@ -384,7 +384,7 @@ export default async function ManagerDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             {deptDisplayName} Management Dashboard
@@ -396,8 +396,8 @@ export default async function ManagerDashboardPage() {
             &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/manager/team">
-          <Button className="gap-2">
+        <Link href="/dashboard/manager/team" className="w-full md:w-auto">
+          <Button className="w-full gap-2 md:w-auto">
             <Users className="size-4" />
             View Team
           </Button>

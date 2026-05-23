@@ -48,12 +48,13 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           subRole: user.subRole,
           department: user.department,
+          avatar: user.avatar,
         };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as unknown as Record<string, unknown>).role as string;
@@ -61,6 +62,24 @@ export const authOptions: NextAuthOptions = {
         token.department = (user as unknown as Record<string, unknown>).department as
           | string
           | null;
+        token.avatar = (user as unknown as Record<string, unknown>).avatar as
+          | string
+          | null;
+      }
+      // If the client calls update(), refetch the avatar from the DB so the
+      // session reflects the most-recent profile picture without a re-login.
+      if (trigger === "update" && token.id) {
+        try {
+          const fresh = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { avatar: true },
+          });
+          if (fresh) {
+            token.avatar = fresh.avatar;
+          }
+        } catch {
+          // best-effort refresh; ignore errors
+        }
       }
       return token;
     },
@@ -70,6 +89,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.subRole = token.subRole as string | null;
         session.user.department = token.department as string | null;
+        session.user.avatar = (token.avatar as string | null) ?? null;
       }
       return session;
     },
