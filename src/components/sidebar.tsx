@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TeamChatSection } from "@/components/client/team-chat";
 
 interface NavItem {
   label: string;
@@ -237,7 +238,10 @@ export function AppSidebar() {
 
       <aside
         className={cn(
-          "flex h-full w-64 flex-col border-r border-border",
+          "flex h-full flex-col border-r border-border",
+          // CLIENT role gets a wider sidebar because it hosts the persistent
+          // "Talk to your team" panel — needs room for names + context.
+          userRole === "CLIENT" ? "w-80" : "w-64",
           // Mobile: fixed overlay drawer, slides in from the left.
           // Desktop (md+): restore the original static, always-visible layout.
           "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out",
@@ -291,6 +295,14 @@ export function AppSidebar() {
             </Link>
           );
         })}
+
+        {/* CLIENT-only: persistent "Talk to your team" panel. The CLIENT role
+            has no nav items above, so this fills the sidebar's scrollable area. */}
+        {userRole === "CLIENT" && (
+          <div className="pt-1">
+            <TeamChatSection />
+          </div>
+        )}
       </nav>
 
       {/* User section */}

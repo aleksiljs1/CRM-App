@@ -11,15 +11,12 @@ import {
   Inbox,
   FolderOpen,
   CheckCircle2,
-  AlertCircle,
   type LucideIcon,
 } from "lucide-react";
-import { TeamChatSection } from "@/components/client/team-chat";
 import {
   LiveTaskProgress,
   type LiveTask,
 } from "@/components/client/live-task-progress";
-import { ActionItemsPanel } from "@/components/client/action-items-panel";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -152,35 +149,7 @@ export default async function ClientDashboardPage() {
       : null,
   }));
 
-  // Build the "what we need from you" action item list. For every INCOMPLETE
-  // submission, find required documents that have NO matching submitted doc
-  // (via SubmittedDocument.aiMatchedToId). Each unmatched requirement becomes
-  // an action item the client must address.
-  type ActionItem = {
-    id: string;
-    requiredDocName: string;
-    processTypeName: string;
-  };
-  const actionItems: ActionItem[] = [];
-  for (const sub of submissions) {
-    if (sub.status !== "INCOMPLETE") continue;
-    const matchedIds = new Set(
-      sub.documents
-        .map((d) => d.aiMatchedToId)
-        .filter((v): v is string => Boolean(v))
-    );
-    for (const req of sub.processType.requiredDocuments) {
-      if (!matchedIds.has(req.id)) {
-        actionItems.push({
-          id: `${sub.id}:${req.id}`,
-          requiredDocName: req.documentName,
-          processTypeName: sub.processType.name,
-        });
-      }
-    }
-  }
-
-  const displayName =
+const displayName =
     client?.companyName ?? session.user.name ?? session.user.email;
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -204,15 +173,7 @@ export default async function ClientDashboardPage() {
       {/* Overall progress headline + Your active work — both live-updating */}
       <LiveTaskProgress initialTasks={liveTasks} />
 
-      {/* What we need from you — unmatched required docs across INCOMPLETE
-          submissions. Slotted high so it's the first thing a returning client
-          sees after their progress ring. */}
-      <section>
-        <SectionLabel icon={AlertCircle}>What we need from you</SectionLabel>
-        <ActionItemsPanel items={actionItems} />
-      </section>
-
-      {/* Overview — 4 real metrics */}
+{/* Overview — 4 real metrics */}
       <section>
         <SectionLabel icon={Sparkles}>Overview</SectionLabel>
         <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -243,10 +204,7 @@ export default async function ClientDashboardPage() {
         </div>
       </section>
 
-      {/* Talk to your team — chat with account manager + task assignees */}
-      <TeamChatSection />
-
-      {/* Recent submissions */}
+{/* Recent submissions */}
       <section>
         <SectionLabel icon={Clock}>Recent submissions</SectionLabel>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">

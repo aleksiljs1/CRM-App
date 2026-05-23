@@ -8,10 +8,7 @@ import {
   Mail,
   Users,
   TrendingUp,
-  Sparkles,
-  CheckCircle,
   ArrowUpRight,
-  Target,
   Loader2,
   Trophy,
   Award,
@@ -19,7 +16,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 // ─── Inline section primitives (matches /dashboard/hr/ pattern) ─────────────
 
@@ -56,13 +52,6 @@ interface PerformanceData {
   avgTasksPerMonth: number;
   emailsHandled: number;
   clientsManaged: number;
-}
-
-interface Tips {
-  strengths: string[];
-  improvements: string[];
-  nextGoal: string;
-  motivation: string;
 }
 
 // Threshold visuals: text color, soft text glow, status label, and the
@@ -239,9 +228,7 @@ export default function MyPerformancePage() {
     rank: number;
     totalEmployees: number;
   } | null>(null);
-  const [tips, setTips] = useState<Tips | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tipsLoading, setTipsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [animatedScore, setAnimatedScore] = useState(0);
 
@@ -279,20 +266,6 @@ export default function MyPerformancePage() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [data]);
-
-  async function loadTips() {
-    setTipsLoading(true);
-    try {
-      const res = await fetch("/api/performance/me/tips", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to get tips");
-      const result = await res.json();
-      setTips(result);
-    } catch {
-      setError("Failed to load AI tips. Please try again.");
-    } finally {
-      setTipsLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -448,132 +421,6 @@ export default function MyPerformancePage() {
         </div>
       </section>
 
-      {/* AI Coach */}
-      <section>
-        <SectionLabel icon={Sparkles}>AI Coach</SectionLabel>
-      <Card className="mt-3 overflow-hidden rounded-xl border bg-card shadow-xs">
-        {/* Gradient header strip */}
-        <div className="flex items-center gap-3 border-b bg-gradient-to-r from-brand-50/60 via-background to-background px-6 py-4">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 shadow-xs dark:bg-brand-900/40 dark:text-brand-300">
-            <Sparkles className="size-4" />
-          </span>
-          <div>
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              AI Career Coach
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Personalized advice based on your performance data
-            </p>
-          </div>
-        </div>
-
-        <CardContent className="p-6">
-          {!tips && !tipsLoading && (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 shadow-xs dark:bg-brand-950/50 dark:text-brand-300">
-                <Sparkles className="size-5" />
-              </span>
-              <p className="mt-4 max-w-md text-sm text-muted-foreground">
-                Get personalized strengths, growth areas, and your next goal —
-                generated from your own activity.
-              </p>
-              <Button onClick={loadTips} className="mt-5 gap-2">
-                <Sparkles className="size-4" />
-                Generate AI tips
-              </Button>
-            </div>
-          )}
-
-          {tipsLoading && (
-            <div className="flex flex-col items-center justify-center gap-3 py-12">
-              <Loader2 className="size-6 animate-spin text-brand-600" />
-              <p className="text-sm text-muted-foreground">
-                Analyzing your performance…
-              </p>
-            </div>
-          )}
-
-          {tips && (
-            <div className="space-y-6">
-              {/* Strengths */}
-              <div>
-                <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Your strengths
-                </h4>
-                <ul className="space-y-2">
-                  {tips.strengths.map((s, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
-                    >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                        <CheckCircle className="size-3.5" />
-                      </span>
-                      <span className="text-sm text-foreground">{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Improvements */}
-              <div>
-                <h4 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Areas to improve
-                </h4>
-                <ul className="space-y-2">
-                  {tips.improvements.map((tip, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors hover:bg-muted/40"
-                    >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                        <ArrowUpRight className="size-3.5" />
-                      </span>
-                      <span className="text-sm text-foreground">{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Next Goal — featured callout */}
-              <div className="rounded-2xl border bg-gradient-to-br from-brand-50 via-card to-card p-5 shadow-xs">
-                <div className="flex items-start gap-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm">
-                    <Target className="size-4" />
-                  </span>
-                  <div>
-                    <h4 className="text-sm font-semibold text-brand-800 dark:text-brand-200">
-                      Next goal
-                    </h4>
-                    <p className="mt-1 text-sm leading-relaxed text-foreground/85">
-                      {tips.nextGoal}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Motivation quote */}
-              <p className="mx-auto max-w-xl text-center text-sm italic leading-relaxed text-brand-700 dark:text-brand-300">
-                &ldquo;{tips.motivation}&rdquo;
-              </p>
-
-              <div className="flex justify-center pt-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadTips}
-                  disabled={tipsLoading}
-                  className="gap-1.5"
-                >
-                  <Sparkles className="size-3.5" />
-                  Get new tips
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      </section>
     </div>
   );
 }
