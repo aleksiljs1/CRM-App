@@ -97,6 +97,7 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   manualDocuments  ManualDocument[] @relation("ManualDocuments")
   taskComments     TaskComment[] @relation("TaskCommentAuthor")
+  generatedReports PerformanceReport[] @relation("GeneratedReports")
 
   @@index([email])
   @@index([role])
@@ -428,5 +429,22 @@ model TaskComment {
 
   @@index([taskId])
   @@index([authorId])
+  @@index([createdAt])
+}
+
+// ─── Performance Reports ────────────────────────────────────────────────────
+
+model PerformanceReport {
+  id            String     @id @default(cuid())
+  department    Department
+  period        String     // "day" | "week" | "month"
+  generatedById String
+  report        Json       // the full AI report JSON
+  createdAt     DateTime   @default(now())
+
+  generatedBy User @relation("GeneratedReports", fields: [generatedById], references: [id])
+
+  @@index([department])
+  @@index([generatedById])
   @@index([createdAt])
 }

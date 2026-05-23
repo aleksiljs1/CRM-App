@@ -19,6 +19,12 @@ import {
   Award,
   Menu,
   X,
+  ScrollText,
+  Cog,
+  ShieldCheck,
+  Building2,
+  ClipboardList,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -108,6 +114,42 @@ const navItems: NavItem[] = [
     href: "/dashboard/manager/settings",
     icon: Settings,
     roles: ["ADMIN", "PARTNER", "MANAGER"],
+  },
+  {
+    label: "Users",
+    href: "/dashboard/admin/users",
+    icon: ShieldCheck,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Clients (Admin)",
+    href: "/dashboard/admin/clients",
+    icon: Building2,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Audit Log",
+    href: "/dashboard/admin/audit-log",
+    icon: ScrollText,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Processes",
+    href: "/dashboard/admin/processes",
+    icon: ClipboardList,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "Firm Performance",
+    href: "/dashboard/admin/performance",
+    icon: Gauge,
+    roles: ["ADMIN"],
+  },
+  {
+    label: "System Settings",
+    href: "/dashboard/admin/settings",
+    icon: Cog,
+    roles: ["ADMIN"],
   },
 ];
 

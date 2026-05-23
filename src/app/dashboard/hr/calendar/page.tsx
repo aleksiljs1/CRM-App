@@ -171,11 +171,29 @@ function formatFullDate(d: Date): string {
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
+
 export default function HRCalendarPage() {
-  useSession(); // page is session-aware via /api/tasks server-side scoping
+  const { data: session } = useSession();
+  const role = session?.user?.role || "";
+  const dept = session?.user?.department || null;
+  const isManagerPlus = ["ADMIN", "PARTNER", "MANAGER"].includes(role);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [calendarView, setCalendarView] = useState<"personal" | "team">("personal");
   const [viewMonth, setViewMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -195,7 +213,7 @@ export default function HRCalendarPage() {
     setLoading(true);
     try {
       const res = await axios.get("/api/tasks", {
-        params: { mine: "true" },
+        params: { mine: calendarView === "personal" ? "true" : "false" },
       });
       setTasks(res.data.tasks || []);
     } catch (err) {
@@ -204,7 +222,7 @@ export default function HRCalendarPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [calendarView]);
 
   useEffect(() => {
     fetchTasks();
@@ -275,18 +293,44 @@ export default function HRCalendarPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
-            Calendar
+            {calendarView === "personal" ? "My Calendar" : `${getDeptName(dept)} Team Calendar`}
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Tasks plotted by deadline &middot; {formatMonthYear(viewMonth)}
+            {calendarView === "personal" ? "Your tasks" : "All department tasks"} plotted by deadline &middot; {formatMonthYear(viewMonth)}
           </p>
         </div>
-        <Link href="/dashboard/hr/tasks">
-          <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700">
-            <LayoutGrid className="size-4" />
-            View Kanban
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          {isManagerPlus && (
+            <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+              <button
+                onClick={() => setCalendarView("personal")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  calendarView === "personal"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                My Tasks
+              </button>
+              <button
+                onClick={() => setCalendarView("team")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  calendarView === "team"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Team
+              </button>
+            </div>
+          )}
+          <Link href="/dashboard/hr/tasks">
+            <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700">
+              <LayoutGrid className="size-4" />
+              View Kanban
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Month navigation */}
@@ -421,7 +465,7 @@ export default function HRCalendarPage() {
                       return (
                         <span
                           key={task.id}
-                          title={`${cfg.label} · ${task.title}`}
+                          title={`${cfg.label} · ${task.title}${calendarView === "team" && task.assignedTo ? ` (${task.assignedTo.name})` : ""}`}
                           className={`flex h-5 items-center gap-1 rounded-md px-1.5 text-[11px] font-medium truncate ${cfg.chip} ${
                             overdue
                               ? "ring-1 ring-red-500/70 dark:ring-red-400/70"

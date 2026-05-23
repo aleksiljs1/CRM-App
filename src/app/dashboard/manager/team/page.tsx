@@ -18,6 +18,9 @@ import {
   Plus,
   X,
   UserPlus,
+  ChevronDown,
+  ChevronUp,
+  Clock,
 } from "lucide-react";
 
 interface TeamMember {
@@ -40,6 +43,24 @@ interface TeamMember {
     emailsHandled: number;
   };
 }
+
+interface UserTask {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  deadline: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  hoursToComplete: number | null;
+}
+
+interface UserTasksResponse {
+  tasks: UserTask[];
+  summary: { completed: number; active: number; overdue: number };
+}
+
+type Period = "day" | "week" | "month";
 
 function getDeptName(dept: string | null): string {
   const map: Record<string, string> = {
@@ -75,6 +96,21 @@ const roleAvatarColors: Record<string, string> = {
   INTERN: "bg-muted-foreground/70",
   ADMIN: "bg-red-500",
   PARTNER: "bg-indigo-500",
+};
+
+const statusColors: Record<string, string> = {
+  TODO: "bg-muted text-muted-foreground",
+  IN_PROGRESS: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  REVIEW: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  APPROVED: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  COMPLETED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+};
+
+const priorityColors: Record<string, string> = {
+  URGENT: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  HIGH: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  MEDIUM: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  LOW: "bg-muted text-muted-foreground",
 };
 
 function getInitials(name: string): string {
@@ -260,6 +296,131 @@ function AddEmployeeModal({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// ─── Task History Panel ─────────────────────────────────────────────────────
+
+function TaskHistoryPanel({ userId }: { userId: string }) {
+  const [period, setPeriod] = useState<Period | null>(null);
+  const [tasks, setTasks] = useState<UserTask[]>([]);
+  const [summary, setSummary] = useState<{ completed: number; active: number; overdue: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const periodLabels: Record<Period, string> = {
+    day: "Today",
+    week: "Week",
+    month: "Month",
+  };
+
+  async function fetchTasks(p: Period) {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/team/${userId}/tasks?period=${p}`);
+      if (!res.ok) throw new Error("Failed");
+      const data: UserTasksResponse = await res.json();
+      setTasks(data.tasks);
+      setSummary(data.summary);
+      setExpanded(true);
+    } catch {
+      setTasks([]);
+      setSummary(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handlePeriodClick(p: Period) {
+    if (period === p && expanded) {
+      setExpanded(false);
+      setPeriod(null);
+      return;
+    }
+    setPeriod(p);
+    fetchTasks(p);
+  }
+
+  return (
+    <div className="border-t pt-3 mt-1">
+      <div className="flex items-center gap-1.5 mb-2">
+        <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground font-medium">View Tasks:</span>
+        <div className="flex rounded-md border border-border bg-muted/50 p-0.5">
+          {(["day", "week", "month"] as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => handlePeriodClick(p)}
+              className={`rounded px-2 py-0.5 text-[10px] font-medium transition-all ${
+                period === p && expanded
+                  ? "bg-[#00968a] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {periodLabels[p]}
+            </button>
+          ))}
+        </div>
+        {loading && <Loader2 className="h-3 w-3 animate-spin text-[#00968a]" />}
+      </div>
+
+      {expanded && !loading && summary && (
+        <div className="space-y-2">
+          {/* Summary row */}
+          <div className="flex gap-3 text-[10px]">
+            <span className="text-green-600 dark:text-green-400 font-medium">
+              {summary.completed} completed
+            </span>
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              {summary.active} active
+            </span>
+            {summary.overdue > 0 && (
+              <span className="text-red-600 dark:text-red-400 font-medium">
+                {summary.overdue} overdue
+              </span>
+            )}
+          </div>
+
+          {/* Task list */}
+          {tasks.length > 0 ? (
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between rounded-md bg-muted/50 px-2.5 py-1.5 text-[11px]"
+                >
+                  <span className="text-foreground/80 truncate mr-2 flex-1">
+                    {task.title}
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${statusColors[task.status] || ""}`}
+                    >
+                      {task.status.replace("_", " ")}
+                    </span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-medium ${priorityColors[task.priority] || ""}`}
+                    >
+                      {task.priority}
+                    </span>
+                    {task.hoursToComplete != null && (
+                      <span className="text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="h-2.5 w-2.5" />
+                        {task.hoursToComplete}h
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground py-1">
+              No tasks found for this period.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -485,6 +646,9 @@ export default function TeamPage() {
                   </Button>
                 </Link>
               </div>
+
+              {/* Task History Panel */}
+              <TaskHistoryPanel userId={user.id} />
             </CardContent>
           </Card>
         ))}

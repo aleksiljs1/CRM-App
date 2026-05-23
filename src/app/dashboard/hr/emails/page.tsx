@@ -6,6 +6,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Mail,
   Send,
@@ -18,6 +20,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  X,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -180,6 +184,15 @@ export default function HREmailsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Compose state
+  const [showCompose, setShowCompose] = useState(false);
+  const [composeTo, setComposeTo] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [composeAttachments, setComposeAttachments] = useState<File[]>([]);
+  const [sendingCompose, setSendingCompose] = useState(false);
+  const composeFileRef = useRef<HTMLInputElement>(null);
+
   // ---- Fetch email list ----
   const fetchEmails = useCallback(
     async (page = 1) => {
@@ -341,6 +354,34 @@ export default function HREmailsPage() {
     }
   };
 
+  // ---- Compose & send new email ----
+  const handleComposeSend = async () => {
+    if (!composeTo.trim() || !composeSubject.trim() || !composeBody.trim()) return;
+    setSendingCompose(true);
+    try {
+      const formData = new FormData();
+      formData.append("to", composeTo.trim());
+      formData.append("subject", composeSubject.trim());
+      formData.append("body", composeBody.trim());
+      composeAttachments.forEach((file) => formData.append("attachments", file));
+
+      await axios.post("/api/emails/compose", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Email sent successfully");
+      setShowCompose(false);
+      setComposeTo("");
+      setComposeSubject("");
+      setComposeBody("");
+      setComposeAttachments([]);
+      fetchEmails(pagination.page);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to send email");
+    } finally {
+      setSendingCompose(false);
+    }
+  };
+
   // ---- Pagination handlers ----
   const goToPage = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return;
@@ -368,19 +409,28 @@ export default function HREmailsPage() {
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handlePrioritize}
-          disabled={prioritizing}
-          className="gap-2 w-full md:w-auto"
-        >
-          {prioritizing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-          )}
-          {prioritizing ? "Analyzing..." : "Sort by Importance"}
-        </Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Button
+            onClick={() => setShowCompose(true)}
+            className="gap-2 bg-brand-600 text-white hover:bg-brand-700 flex-1 md:flex-none"
+          >
+            <Plus className="h-4 w-4" />
+            Compose
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrioritize}
+            disabled={prioritizing}
+            className="gap-2 flex-1 md:flex-none"
+          >
+            {prioritizing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+            )}
+            {prioritizing ? "Analyzing..." : "Sort by Importance"}
+          </Button>
+        </div>
       </div>
 
       {/* ------ Filter tabs + Search ------ */}
@@ -783,6 +833,152 @@ export default function HREmailsPage() {
           )}
         </Card>
       </div>
+
+      {/* ====== Compose Modal ====== */}
+      {showCompose && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Sticky header */}
+            <div className="flex items-center justify-between p-6 pb-3 shrink-0 border-b">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Mail className="h-5 w-5 text-brand-600" />
+                New Email
+              </h2>
+              <button
+                onClick={() => setShowCompose(false)}
+                className="p-1 hover:bg-muted rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="overflow-y-auto p-6 pt-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                  To *
+                </label>
+                <Input
+                  type="email"
+                  value={composeTo}
+                  onChange={(e) => setComposeTo(e.target.value)}
+                  placeholder="recipient@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                  Subject *
+                </label>
+                <Input
+                  value={composeSubject}
+                  onChange={(e) => setComposeSubject(e.target.value)}
+                  placeholder="Email subject..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                  Message *
+                </label>
+                <Textarea
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  placeholder="Write your email..."
+                  rows={8}
+                  className="resize-y min-h-[160px]"
+                />
+              </div>
+
+              {/* Attachments */}
+              <div>
+                <input
+                  ref={composeFileRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setComposeAttachments((prev) => [
+                        ...prev,
+                        ...Array.from(e.target.files!),
+                      ]);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => composeFileRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  {composeAttachments.length > 0
+                    ? `${composeAttachments.length} file(s) attached`
+                    : "Attach Files"}
+                </Button>
+                {composeAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {composeAttachments.map((file, i) => (
+                      <div
+                        key={i}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-muted rounded-lg text-xs"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        <span className="max-w-[150px] truncate font-medium">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setComposeAttachments((prev) =>
+                              prev.filter((_, idx) => idx !== i)
+                            )
+                          }
+                          className="text-muted-foreground hover:text-red-500 ml-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-end gap-2 p-6 pt-3 border-t shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowCompose(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleComposeSend}
+                disabled={
+                  sendingCompose ||
+                  !composeTo.trim() ||
+                  !composeSubject.trim() ||
+                  !composeBody.trim()
+                }
+                className="gap-2 bg-brand-600 text-white hover:bg-brand-700"
+              >
+                {sendingCompose ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {sendingCompose ? "Sending..." : "Send Email"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
