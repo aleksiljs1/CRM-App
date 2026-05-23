@@ -199,20 +199,25 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       {/* Page title row */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-brand-700">
-            System Administration
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Admin Overview
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Firm-wide overview &middot; {today}
+            System-wide control &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/admin" className="w-full md:w-auto">
-          <Button className="w-full gap-2 md:w-auto">
-            <Users className="size-4" />
-            Manage Users
-          </Button>
-        </Link>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-slate-200/60 bg-slate-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:border-slate-800/50 dark:bg-slate-900/40 dark:text-slate-300">
+            Admin
+          </span>
+          <Link href="/dashboard/admin" className="w-full md:w-auto">
+            <Button className="w-full gap-2 md:w-auto">
+              <Users className="size-4" />
+              Manage Users
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ── Section 1 — Insights ──────────────────────────────────────── */}

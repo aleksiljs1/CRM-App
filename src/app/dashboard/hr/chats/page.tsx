@@ -518,35 +518,39 @@ export default function ChatsPage() {
   const activeChatUser = activeConv ? getOtherParticipant(activeConv) : null;
 
   // ---- Render ----
+  const myDeptDisplayName = getDeptName(session?.user?.department || null);
+
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
-          <MessageSquare className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Chats</h1>
-          <p className="text-sm text-muted-foreground">
-            Message your colleagues
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Chats
+          </h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Team conversations &middot; message your colleagues
           </p>
         </div>
+        <span className="inline-flex items-center self-start rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300 md:self-auto">
+          {myDeptDisplayName}
+        </span>
       </div>
 
       {/* Main split layout */}
-      <div className="flex flex-1 gap-4 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
         {/* ====== LEFT PANEL: User/Conversation List (40%) ====== */}
-        <Card className="flex w-[40%] min-w-[320px] flex-col overflow-hidden">
+        <Card className="flex w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden min-h-[300px] md:min-h-0">
           {/* Search */}
-          <div className="p-3 border-b">
+          <div className="p-3 border-b border-border">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 placeholder="Search..."
-                className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                className="h-9 w-full rounded-lg border border-border bg-muted/50 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           </div>
@@ -596,7 +600,8 @@ export default function ChatsPage() {
                   </p>
                 </div>
               ) : (
-                conversations
+                <ul className="space-y-1.5 p-2">
+                  {conversations
                   .filter((conv) => {
                     if (!search.trim()) return true;
                     const other = getOtherParticipant(conv);
@@ -608,22 +613,20 @@ export default function ChatsPage() {
                     const other = getOtherParticipant(conv);
                     const isSelected = conv.id === activeConvId;
                     return (
+                      <li key={conv.id}>
                       <button
-                        key={conv.id}
                         onClick={() => openConversation(conv)}
-                        className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
+                        className={`group relative w-full rounded-lg border bg-card px-3 py-3 text-left transition-colors ${
                           isSelected
-                            ? "bg-brand-50 dark:bg-brand-950/40 border-l-2 border-l-brand-500"
-                            : "hover:bg-muted/50 border-l-2 border-l-transparent"
+                            ? "bg-brand-50/40 dark:bg-brand-950/30 border-brand-200/60 dark:border-brand-800/50"
+                            : "hover:bg-muted/40"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
-                                  {other?.name?.charAt(0)?.toUpperCase() || "?"}
-                                </span>
+                            <div className="flex items-center gap-3">
+                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                                {other?.name?.charAt(0)?.toUpperCase() || "?"}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
@@ -654,7 +657,7 @@ export default function ChatsPage() {
                               </div>
                             </div>
                             {conv.lastMessage && (
-                              <p className="mt-1 pl-10 truncate text-xs text-muted-foreground">
+                              <p className="mt-1.5 pl-[3.25rem] truncate text-xs text-muted-foreground">
                                 {conv.lastMessage.senderId === currentUserId
                                   ? "You: "
                                   : ""}
@@ -664,24 +667,26 @@ export default function ChatsPage() {
                             )}
                           </div>
                           {conv.hasUnread && (
-                            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                            <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                               !
                             </span>
                           )}
                         </div>
                       </button>
+                      </li>
                     );
-                  })
+                  })}
+                </ul>
               )
             ) : (
               // ---- People ----
               <>
                 {/* Department filter */}
-                <div className="p-3 border-b">
+                <div className="p-3 border-b border-border">
                   <select
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
-                    className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                    className="h-9 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   >
                     {DEPARTMENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -703,17 +708,16 @@ export default function ChatsPage() {
                     </p>
                   </div>
                 ) : (
-                  users.map((user) => (
+                  <ul className="space-y-1.5 p-2">
+                    {users.map((user) => (
+                    <li key={user.id}>
                     <button
-                      key={user.id}
                       onClick={() => startConversation(user.id)}
-                      className="group w-full border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/50"
+                      className="group w-full rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                          <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
-                            {user.name?.charAt(0)?.toUpperCase() || "?"}
-                          </span>
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                          {user.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">
@@ -733,7 +737,9 @@ export default function ChatsPage() {
                         )}
                       </div>
                     </button>
-                  ))
+                    </li>
+                  ))}
+                  </ul>
                 )}
               </>
             )}
@@ -741,7 +747,7 @@ export default function ChatsPage() {
         </Card>
 
         {/* ====== RIGHT PANEL: Active Conversation (60%) ====== */}
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className={`flex flex-1 flex-col overflow-hidden min-h-[400px] md:min-h-0 ${!activeConvId ? "hidden md:flex" : ""}`}>
           {!activeConvId ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -758,18 +764,16 @@ export default function ChatsPage() {
             <>
               {/* Conversation header */}
               {activeChatUser && (
-                <div className="shrink-0 border-b px-6 py-4">
+                <div className="shrink-0 border-b border-border bg-muted/20 px-4 md:px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                      <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
-                        {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}
-                      </span>
+                    <div className="flex size-10 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                      {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}
                     </div>
-                    <div>
-                      <h2 className="text-base font-semibold">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-sm font-semibold text-foreground">
                         {activeChatUser.name}
                       </h2>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {activeChatUser.subRole || activeChatUser.role}
                         {activeChatUser.department && (
                           <>
@@ -779,9 +783,13 @@ export default function ChatsPage() {
                         )}
                       </p>
                     </div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      <span className="size-1.5 rounded-full bg-emerald-500" />
+                      Online
+                    </span>
                   </div>
                   {typingUser && (
-                    <p className="mt-1 text-xs text-brand-600 dark:text-brand-400 italic animate-pulse">
+                    <p className="mt-1 text-xs italic text-brand-600 dark:text-brand-400 animate-pulse">
                       {typingUser} is typing...
                     </p>
                   )}
@@ -789,7 +797,7 @@ export default function ChatsPage() {
               )}
 
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
                 {loadingMessages ? (
                   <MessagesSkeleton />
                 ) : messages.length === 0 ? (
@@ -884,7 +892,7 @@ export default function ChatsPage() {
               </div>
 
               {/* Message input */}
-              <div className="shrink-0 border-t bg-muted/20 px-6 py-4">
+              <div className="shrink-0 border-t border-border bg-muted/20 px-4 md:px-6 py-4">
                 <textarea
                   ref={textareaRef}
                   value={messageText}
@@ -894,7 +902,7 @@ export default function ChatsPage() {
                   }}
                   placeholder="Type a message..."
                   rows={2}
-                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   TrendingUp,
   AlertTriangle,
@@ -14,7 +15,39 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  type LucideIcon,
 } from "lucide-react";
+
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
+
+function SectionLabel({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="size-3 text-muted-foreground" />
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {children}
+      </span>
+    </div>
+  );
+}
 
 interface PerformanceData {
   user: {
@@ -145,6 +178,10 @@ function DeptStatusBadge({ status }: { status: string }) {
 }
 
 export default function PerformancePage() {
+  const { data: session } = useSession();
+  const dept = session?.user?.department || null;
+  const deptDisplayName = getDeptName(dept);
+
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [aiReview, setAiReview] = useState<AIReview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -202,26 +239,28 @@ export default function PerformancePage() {
   return (
     <div className="space-y-8 pb-10">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100/70 dark:bg-brand-900/40">
-            <Brain className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              AI Performance Tracker
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Data-driven employee insights and raise recommendations
-            </p>
-          </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Department Performance
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Data-driven employee insights and raise recommendations
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
         </div>
       </div>
 
       {/* AI Executive Summary */}
-      <div className="rounded-xl border border-brand-500/20 bg-gradient-to-br from-brand-50 to-brand-100/40 dark:from-brand-950/40 dark:to-brand-900/20 p-6 shadow-sm">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+      <section>
+        <SectionLabel icon={Brain}>AI Executive Summary</SectionLabel>
+        <div className="mt-3 rounded-xl border bg-card p-4 md:p-5 shadow-xs">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-0">
+          <div className="flex flex-wrap items-center gap-3">
             <Sparkles className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             <h2 className="text-lg font-semibold text-foreground">
               AI Executive Summary
@@ -236,7 +275,7 @@ export default function PerformancePage() {
           <button
             onClick={runAIAnalysis}
             disabled={aiLoading}
-            className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-700 disabled:opacity-60"
+            className="flex w-full md:w-auto items-center justify-center md:justify-start gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-700 disabled:opacity-60"
           >
             {aiLoading ? (
               <>
@@ -287,7 +326,8 @@ export default function PerformancePage() {
             {error}
           </div>
         )}
-      </div>
+        </div>
+      </section>
 
       {/* AI Results Sections */}
       {aiReview && (
@@ -295,12 +335,9 @@ export default function PerformancePage() {
           {/* Raise Recommendations */}
           {aiReview.raiseRecommendations?.length > 0 && (
             <section>
-              <div className="mb-4 flex items-center gap-2">
-                <Award className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  Raise Recommendations
-                </h2>
-                <span className="rounded-full bg-brand-100/70 dark:bg-brand-900/40 px-2.5 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-300">
+              <div className="mb-3 flex items-center gap-2">
+                <SectionLabel icon={Award}>Raise Recommendations</SectionLabel>
+                <span className="rounded-full bg-brand-100/70 dark:bg-brand-900/40 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-brand-700 dark:text-brand-300">
                   {aiReview.raiseRecommendations.length}
                 </span>
               </div>
@@ -312,7 +349,7 @@ export default function PerformancePage() {
                   return (
                     <div
                       key={rec.userId || i}
-                      className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+                      className="rounded-xl border bg-card p-4 md:p-5 shadow-xs transition-shadow hover:shadow-md"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
@@ -361,12 +398,9 @@ export default function PerformancePage() {
           {/* Needs Attention */}
           {aiReview.needsAttention?.length > 0 && (
             <section>
-              <div className="mb-4 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  Needs Attention
-                </h2>
-                <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <div className="mb-3 flex items-center gap-2">
+                <SectionLabel icon={AlertTriangle}>Needs Attention</SectionLabel>
+                <span className="rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-amber-700 dark:text-amber-300">
                   {aiReview.needsAttention.length}
                 </span>
               </div>
@@ -374,7 +408,7 @@ export default function PerformancePage() {
                 {aiReview.needsAttention.map((item, i) => (
                   <div
                     key={item.userId || i}
-                    className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-5 shadow-sm"
+                    className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-4 md:p-5 shadow-xs"
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -400,11 +434,8 @@ export default function PerformancePage() {
           {/* Burnout Risk */}
           {aiReview.burnoutRisk?.length > 0 && (
             <section>
-              <div className="mb-4 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  Burnout Risk
-                </h2>
+              <div className="mb-3 flex items-center gap-2">
+                <SectionLabel icon={AlertTriangle}>Burnout Risk</SectionLabel>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
                 {aiReview.burnoutRisk.map((item, i) => {
@@ -423,7 +454,7 @@ export default function PerformancePage() {
                   return (
                     <div
                       key={item.userId || i}
-                      className={`rounded-xl border p-4 shadow-sm ${riskColor}`}
+                      className={`rounded-xl border p-4 shadow-xs ${riskColor}`}
                     >
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-foreground">
@@ -446,17 +477,14 @@ export default function PerformancePage() {
           {/* Department Health */}
           {aiReview.departmentInsights?.length > 0 && (
             <section>
-              <div className="mb-4 flex items-center gap-2">
-                <Users className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                <h2 className="text-lg font-semibold text-foreground">
-                  Department Health
-                </h2>
+              <div className="mb-3 flex items-center gap-2">
+                <SectionLabel icon={Users}>Department Health</SectionLabel>
               </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {aiReview.departmentInsights.map((dept, i) => (
                   <div
                     key={dept.department || i}
-                    className="rounded-xl border border-border bg-card p-5 shadow-sm"
+                    className="rounded-xl border bg-card p-4 md:p-5 shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-foreground">
@@ -477,16 +505,13 @@ export default function PerformancePage() {
 
       {/* Performance Scores Table */}
       <section>
-        <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          <h2 className="text-lg font-semibold text-foreground">
-            Employee Performance Scores
-          </h2>
-          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+        <div className="mb-3 flex items-center gap-2">
+          <SectionLabel icon={TrendingUp}>Employee Performance Scores</SectionLabel>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold tabular-nums text-muted-foreground">
             {performanceData.length} employees
           </span>
         </div>
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -527,7 +552,7 @@ export default function PerformancePage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
-                        className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
                           item.performanceScore >= 80
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
                             : item.performanceScore >= 60
@@ -538,22 +563,22 @@ export default function PerformancePage() {
                         {item.performanceScore}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.tasksCompleted}/{item.totalTasks}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.onTimeRate}%
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.highPriorityCompleted}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.avgTasksPerMonth}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.emailsHandled}
                     </td>
-                    <td className="px-4 py-3 text-center text-muted-foreground">
+                    <td className="px-4 py-3 text-center text-muted-foreground tabular-nums">
                       {item.clientsManaged}
                     </td>
                   </tr>

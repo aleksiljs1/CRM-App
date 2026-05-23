@@ -272,7 +272,7 @@ export default function HRCalendarPage() {
   return (
     <div className="space-y-6">
       {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-brand-700">
             Calendar
@@ -281,8 +281,8 @@ export default function HRCalendarPage() {
             Tasks plotted by deadline &middot; {formatMonthYear(viewMonth)}
           </p>
         </div>
-        <Link href="/dashboard/hr/tasks">
-          <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700">
+        <Link href="/dashboard/hr/tasks" className="w-full md:w-auto">
+          <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700 w-full md:w-auto">
             <LayoutGrid className="size-4" />
             View Kanban
           </Button>
@@ -341,6 +341,8 @@ export default function HRCalendarPage() {
 
       {/* Calendar grid card */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="overflow-x-auto md:overflow-x-visible">
+        <div className="min-w-[640px] md:min-w-0">
         {/* Weekday headers */}
         <div className="grid grid-cols-7 border-b bg-muted/30">
           {WEEKDAYS.map((d) => (
@@ -448,6 +450,8 @@ export default function HRCalendarPage() {
             })}
           </div>
         )}
+        </div>
+        </div>
       </div>
 
       {/* Empty state — no tasks this month */}

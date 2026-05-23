@@ -151,20 +151,25 @@ export default async function PartnerDashboardPage() {
     <div className="space-y-8">
       {/* Page title row */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-brand-700">
-            Firm Overview
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Partner Overview
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Partner dashboard &middot; firm-wide performance &middot; {today}
+            Firm-wide performance &middot; {today}
           </p>
         </div>
-        <Link href="/dashboard/reports" className="w-full md:w-auto">
-          <Button className="w-full gap-2 md:w-auto">
-            <BarChart3 className="size-4" />
-            View Reports
-          </Button>
-        </Link>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-indigo-200/60 bg-indigo-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-700 dark:border-indigo-800/50 dark:bg-indigo-900/40 dark:text-indigo-300">
+            Partner
+          </span>
+          <Link href="/dashboard/reports" className="w-full md:w-auto">
+            <Button className="w-full gap-2 md:w-auto">
+              <BarChart3 className="size-4" />
+              View Reports
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* ── Section 1 — Overview ─────────────────────────────────────── */}

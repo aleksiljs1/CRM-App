@@ -24,6 +24,7 @@ import {
   Paperclip,
   MessageSquare,
   Send,
+  Calendar,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -221,41 +222,62 @@ function TaskCard({
   const { text: deadlineText, isOverdue } = formatDeadline(task.deadline);
   const priority = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.MEDIUM;
 
+  const assigneeName =
+    task.status === "REVIEW" && !task.assignedTo
+      ? "Needs Reviewer"
+      : task.status === "REVIEW" && task.assignedTo
+        ? `Rev: ${task.assignedTo.name.split(" ")[0]}`
+        : task.assignedTo
+          ? task.assignedTo.name.split(" ")[0]
+          : "Unassigned";
+
+  const assigneeInitials = task.assignedTo
+    ? getInitials(task.assignedTo.name)
+    : task.status === "REVIEW"
+      ? "?"
+      : "·";
+
   return (
     <Card
-      className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${
+      className={`p-3 rounded-md shadow-sm cursor-pointer hover:shadow-md transition-shadow ${
         isOverdue && task.status !== "COMPLETED"
           ? "border-l-4 border-l-red-500"
           : ""
       }`}
       onClick={() => onClick(task)}
     >
-      <h4 className="font-semibold text-sm leading-snug mb-2">{task.title}</h4>
+      <h4 className="font-semibold text-sm leading-snug mb-2 text-foreground">{task.title}</h4>
 
-      <div className="flex flex-wrap gap-1 mb-2">
-        <Badge variant="outline" className={`text-xs ${priority.color}`}>
+      <div className="flex flex-wrap gap-1 mb-2.5">
+        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 font-medium ${priority.color}`}>
           {priority.label}
         </Badge>
         {task.client && (
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium">
             {task.client.companyName}
           </Badge>
         )}
         {task.department && (
-          <Badge variant="outline" className="text-xs bg-muted/50">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium bg-muted/50">
             {task.department.replace("_", " ")}
           </Badge>
         )}
       </div>
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className={`flex items-center gap-1 ${isOverdue && task.status !== "COMPLETED" ? "text-red-600 dark:text-red-400 font-medium" : ""}`}>
+        <span
+          className={`flex items-center gap-1.5 ${
+            isOverdue && task.status !== "COMPLETED"
+              ? "text-red-600 dark:text-red-400 font-medium"
+              : ""
+          }`}
+        >
           {isOverdue && task.status !== "COMPLETED" ? (
             <AlertTriangle className="w-3 h-3" />
           ) : (
-            <Clock className="w-3 h-3" />
+            <Calendar className="w-3 h-3" />
           )}
-          {deadlineText}
+          <span className="truncate">{deadlineText}</span>
         </span>
         <div className="flex items-center gap-2 ml-2">
           {task.attachments && task.attachments.length > 0 && (
@@ -264,12 +286,15 @@ function TaskCard({
               <span>{task.attachments.length}</span>
             </div>
           )}
-          <span className={`truncate ${task.status === "REVIEW" && !task.assignedTo ? "text-amber-600 dark:text-amber-400 font-medium" : ""}`}>
-            {task.status === "REVIEW" && !task.assignedTo
-              ? "Needs Reviewer"
-              : task.status === "REVIEW" && task.assignedTo
-                ? `Rev: ${task.assignedTo.name.split(" ")[0]}`
-                : task.assignedTo ? task.assignedTo.name.split(" ")[0] : "Unassigned"}
+          <span
+            title={assigneeName}
+            className={`inline-flex size-6 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-[10px] font-semibold ${
+              task.status === "REVIEW" && !task.assignedTo
+                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                : ""
+            }`}
+          >
+            {assigneeInitials}
           </span>
         </div>
       </div>
@@ -562,7 +587,7 @@ function TaskDetailModal({
           )}
 
           {/* Info grid */}
-          <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
             <div>
               <span className="text-muted-foreground">Priority</span>
               <div className="mt-0.5">
@@ -920,7 +945,7 @@ function NewTaskForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground/80 mb-1 block">
                   Priority
@@ -1075,6 +1100,9 @@ export default function HRTasksPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"mine" | "department">(isManagerPlus ? "department" : "mine");
+  const [viewFilter, setViewFilter] = useState<
+    "ALL" | "TODO" | "IN_PROGRESS" | "REVIEW" | "APPROVED" | "COMPLETED"
+  >("ALL");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
 
@@ -1169,43 +1197,70 @@ export default function HRTasksPage() {
     );
   }
 
+  const totalCount =
+    counts.todo + counts.inProgress + counts.review + counts.approved + counts.completed;
+
+  const filterTabs: {
+    key: typeof viewFilter;
+    label: string;
+    count: number;
+  }[] = [
+    { key: "ALL", label: "All", count: totalCount },
+    { key: "TODO", label: "To Do", count: counts.todo },
+    { key: "IN_PROGRESS", label: "In Progress", count: counts.inProgress },
+    { key: "REVIEW", label: "Review", count: counts.review },
+    { key: "APPROVED", label: "Approved", count: counts.approved },
+    { key: "COMPLETED", label: "Completed", count: counts.completed },
+  ];
+
+  const subtitleText =
+    canViewDepartment && viewMode === "department"
+      ? `All ${deptDisplayName}`
+      : `My Tasks · ${deptDisplayName}`;
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{deptDisplayName} Tasks</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your work across the workflow
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Tasks
+          </h1>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            {subtitleText}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:flex-nowrap">
           {canViewDepartment && (
-            <div className="flex gap-1 rounded-lg border bg-muted/40 p-1">
+            <div className="flex gap-1 rounded-full border bg-muted/40 p-1">
               <button
                 onClick={() => setViewMode("mine")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                   viewMode === "mine"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                My Tasks
+                Mine
               </button>
               <button
                 onClick={() => setViewMode("department")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                   viewMode === "department"
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                All {deptDisplayName}
+                Department
               </button>
             </div>
           )}
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
           {canCreateTasks && (
             <Button
+              size="sm"
               className="bg-brand-600 hover:bg-brand-700 text-white"
               onClick={() => setShowNewForm(true)}
             >
@@ -1216,54 +1271,108 @@ export default function HRTasksPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex flex-wrap gap-2">
-        <Badge className="bg-muted text-foreground/80 hover:bg-muted dark:bg-muted dark:text-foreground/80">
-          To Do: {counts.todo}
-        </Badge>
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/40">
-          In Progress: {counts.inProgress}
-        </Badge>
-        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/40">
-          Review: {counts.review}
-        </Badge>
-        <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/40 dark:text-teal-300 dark:hover:bg-teal-900/40">
-          Approved: {counts.approved}
-        </Badge>
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/40">
-          Completed: {counts.completed}
-        </Badge>
-        {counts.overdue > 0 && (
-          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/40">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            Overdue: {counts.overdue}
-          </Badge>
-        )}
-      </div>
+      {/* Filter pill bar + Search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-muted/50 p-1">
+          {filterTabs.map((tab) => {
+            const isActive = viewFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setViewFilter(tab.key)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`ml-1 text-[10px] tabular-nums ${
+                    isActive
+                      ? "font-semibold text-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  · {tab.count}
+                </span>
+              </button>
+            );
+          })}
+          {counts.overdue > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-red-700 dark:bg-red-900/40 dark:text-red-300">
+              <AlertTriangle className="w-3 h-3" />
+              Overdue · {counts.overdue}
+            </span>
+          )}
+        </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search tasks..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-5 gap-3 min-h-[60vh]">
-        {STATUSES.map((status) => {
-          const config = STATUS_CONFIG[status];
-          const statusTasks = tasksByStatus(status);
+      {viewFilter === "ALL" ? (
+        <div className="-mx-3 sm:mx-0 overflow-x-auto md:overflow-x-visible">
+          <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[1000px] md:min-w-0 px-3 sm:px-0">
+            {STATUSES.map((status) => {
+              const config = STATUS_CONFIG[status];
+              const statusTasks = tasksByStatus(status);
 
+              return (
+                <div
+                  key={status}
+                  className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border`}
+                >
+                  {/* Column header */}
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-foreground/80">
+                      {config.label}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-xs h-5 min-w-[1.25rem] justify-center"
+                    >
+                      {statusTasks.length}
+                    </Badge>
+                  </div>
+
+                  {/* Tasks */}
+                  <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+                    {statusTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onClick={setSelectedTask}
+                      />
+                    ))}
+                    {statusTasks.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-6">
+                        No tasks
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        (() => {
+          const config = STATUS_CONFIG[viewFilter];
+          const statusTasks = tasksByStatus(viewFilter);
           return (
             <div
-              key={status}
-              className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border`}
+              className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border min-h-[60vh]`}
             >
-              {/* Column header */}
               <div className="px-3 py-2 flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground/80">
                   {config.label}
@@ -1275,8 +1384,6 @@ export default function HRTasksPage() {
                   {statusTasks.length}
                 </Badge>
               </div>
-
-              {/* Tasks */}
               <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
                 {statusTasks.map((task) => (
                   <TaskCard
@@ -1286,15 +1393,15 @@ export default function HRTasksPage() {
                   />
                 ))}
                 {statusTasks.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-6">
-                    No tasks
+                  <p className="text-xs text-muted-foreground text-center py-10">
+                    No tasks in {config.label.toLowerCase()}
                   </p>
                 )}
               </div>
             </div>
           );
-        })}
-      </div>
+        })()
+      )}
 
       {/* Modals */}
       {selectedTask && (

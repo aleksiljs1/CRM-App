@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,20 @@ import {
   CheckCircle2,
   Copy,
 } from "lucide-react";
+
+function getDeptName(dept: string | null): string {
+  const map: Record<string, string> = {
+    AUDIT: "Audit & Advisory",
+    ACCOUNTING_TAX: "Accounting & Tax",
+    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
+    LEGAL: "Legal Advisory",
+    ADVISORY: "Advisory Services",
+    HR: "HR & Payroll",
+    MARKETING: "Marketing",
+    FINANCE: "Finance",
+  };
+  return dept ? map[dept] || dept : "Firm-Wide";
+}
 
 interface ClientData {
   id: string;
@@ -71,8 +85,8 @@ function ClientCard({ client }: { client: ClientData }) {
   const lastEmail = client.emails[0];
 
   return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="mb-2 flex items-start justify-between">
+    <div className="rounded-xl border bg-card p-4 shadow-xs transition-shadow hover:shadow-md">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <h4 className="text-sm font-semibold text-foreground leading-tight">
           {client.companyName}
         </h4>
@@ -86,7 +100,7 @@ function ClientCard({ client }: { client: ClientData }) {
       <p className="text-xs text-muted-foreground">{client.contactName}</p>
       <p className="mb-3 text-xs text-muted-foreground">{client.contactEmail}</p>
 
-      <div className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
+      <div className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
         <Building2 className="h-3 w-3" />
         <span>
           {client.assignedTo ? client.assignedTo.name : "Unassigned"}
@@ -94,11 +108,11 @@ function ClientCard({ client }: { client: ClientData }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-        <span className="flex items-center gap-1" title="Active tasks">
+        <span className="flex items-center gap-1 tabular-nums" title="Active tasks">
           <CheckSquare className="h-3 w-3" />
           {activeTasks}
         </span>
-        <span className="flex items-center gap-1" title="Submissions">
+        <span className="flex items-center gap-1 tabular-nums" title="Submissions">
           <FileText className="h-3 w-3" />
           {client.submissions.length}
         </span>
@@ -110,7 +124,7 @@ function ClientCard({ client }: { client: ClientData }) {
         )}
       </div>
 
-      <div className="mt-3 border-t pt-2 text-[10px] text-muted-foreground flex items-center gap-1">
+      <div className="mt-3 border-t border-border pt-2 text-[10px] text-muted-foreground flex items-center gap-1">
         <Clock className="h-2.5 w-2.5" />
         Created {timeAgo(client.createdAt)}
       </div>
@@ -493,12 +507,19 @@ function InviteClientModal({
 
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
+type StatusFilter = "ALL" | "LEAD" | "ACTIVE" | "INACTIVE";
+
 export default function ClientPipelinePage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const dept = session?.user?.department || null;
+  const deptDisplayName = getDeptName(dept);
+
   const [clients, setClients] = useState<ClientData[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
   const fetchClients = useCallback(async () => {
     try {
@@ -536,6 +557,19 @@ export default function ClientPipelinePage() {
     };
   }, [filtered]);
 
+  const filterTabs: { key: StatusFilter; label: string; count: number }[] = [
+    { key: "ALL", label: "All", count: filtered.length },
+    { key: "LEAD", label: "Leads", count: grouped.LEAD.length },
+    { key: "ACTIVE", label: "Active", count: grouped.ACTIVE.length },
+    { key: "INACTIVE", label: "Inactive", count: grouped.INACTIVE.length },
+  ];
+
+  // Decide which COLUMNS to display based on the segmented filter.
+  const visibleColumns =
+    statusFilter === "ALL"
+      ? COLUMNS
+      : COLUMNS.filter((col) => col.status === statusFilter);
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -545,84 +579,130 @@ export default function ClientPipelinePage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-6 p-6">
+    <div className="flex h-full flex-col gap-6 p-3 md:p-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Client Pipeline</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            Client Pipeline
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
             Track clients from first contact to active engagement
           </p>
         </div>
-        <Button
-          onClick={() => setShowInvite(true)}
-          className="bg-brand-600 hover:bg-brand-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          New client
-        </Button>
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
+          <Button
+            onClick={() => setShowInvite(true)}
+            className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New client
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — restyled as the small-stat strip */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {COLUMNS.map((col) => {
           const count = grouped[col.status].length;
           return (
-            <Card key={col.status} className="relative overflow-hidden">
-              <CardContent className="flex items-center gap-4 p-5">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${col.cardBg}`}
-                >
-                  <col.icon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    {col.label}
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">{count}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              key={col.status}
+              className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs"
+            >
+              <span
+                className={`flex size-9 items-center justify-center rounded-lg ${col.bgColor} ${col.textColor}`}
+              >
+                <col.icon className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-base font-bold tabular-nums leading-tight text-foreground">
+                  {count}
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {col.label}
+                </p>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by company or contact name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Filter pill bar + Search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-muted/50 p-1">
+          {filterTabs.map((tab) => {
+            const isActive = statusFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`ml-1 text-[10px] tabular-nums ${
+                    isActive
+                      ? "font-semibold text-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  · {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by company or contact name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 bg-muted/50"
+          />
+        </div>
       </div>
 
       {/* Kanban Board */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-        {COLUMNS.map((col) => {
+      <div
+        className={`grid min-h-0 flex-1 grid-cols-1 gap-4 ${visibleColumns.length === 1 ? "" : "lg:grid-cols-3"}`}
+      >
+        {visibleColumns.map((col) => {
           const items = grouped[col.status];
           return (
             <div
               key={col.status}
-              className={`flex flex-col rounded-lg border border-t-4 ${col.borderColor} bg-muted/30`}
+              className={`flex flex-col rounded-xl border border-t-4 ${col.borderColor} bg-card shadow-xs`}
             >
               {/* Column header */}
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ${col.bgColor} ${col.textColor}`}
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${col.bgColor} ${col.textColor}`}
                   >
                     {col.label}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-xs font-medium tabular-nums text-muted-foreground">
                   {items.length}
                 </span>
               </div>
 
               {/* Column body */}
-              <div className="flex-1 space-y-3 overflow-y-auto px-3 pb-3" style={{ maxHeight: "calc(100vh - 380px)" }}>
+              <div
+                className="flex-1 space-y-3 overflow-y-auto px-3 pb-3"
+                style={{ maxHeight: "calc(100vh - 380px)" }}
+              >
                 {items.length === 0 ? (
                   <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
                     No clients

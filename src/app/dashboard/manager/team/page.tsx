@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +14,6 @@ import {
   Loader2,
   ClipboardList,
   ExternalLink,
-  Plus,
   X,
   UserPlus,
 } from "lucide-react";
@@ -326,96 +324,125 @@ export default function TeamPage() {
 
   const totalOverdue = team.reduce((sum, m) => sum + m.stats.overdueTasks, 0);
 
+  const deptDisplayName = getDeptName(session?.user?.department ?? null);
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-3 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">My Team</h1>
-          <p className="text-sm text-muted-foreground">
-            {getDeptName(session?.user?.department ?? null)}
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
+            My Team
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            {deptDisplayName} &middot; {team.length} {team.length === 1 ? "member" : "members"}
           </p>
         </div>
-        {isManagerPlus && (
-          <Button
-            className="bg-brand-600 hover:bg-brand-700 text-white"
-            onClick={() => setShowAddEmployee(true)}
-          >
-            <UserPlus className="w-4 h-4 mr-1" />
-            Add Employee
-          </Button>
-        )}
+        <div className="flex flex-col items-start gap-2 md:items-end">
+          <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
+            {deptDisplayName}
+          </span>
+          {isManagerPlus && (
+            <Button
+              className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
+              onClick={() => setShowAddEmployee(true)}
+            >
+              <UserPlus className="w-4 h-4 mr-1" />
+              Add Employee
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
-              <Users className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{team.length}</p>
-              <p className="text-xs text-muted-foreground">Team Members</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950">
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{avgCompletion}%</p>
-              <p className="text-xs text-muted-foreground">Avg Completion</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950">
-              <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalOpenTasks}</p>
-              <p className="text-xs text-muted-foreground">Open Tasks</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${totalOverdue > 0 ? "bg-red-50 dark:bg-red-950" : "bg-muted/50"}`}>
-              <AlertTriangle className={`h-5 w-5 ${totalOverdue > 0 ? "text-red-500" : "text-muted-foreground"}`} />
-            </div>
-            <div>
-              <p className={`text-2xl font-bold ${totalOverdue > 0 ? "text-red-600 dark:text-red-400" : ""}`}>
-                {totalOverdue}
-              </p>
-              <p className="text-xs text-muted-foreground">Overdue Tasks</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Overview small-stat strip */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+            <Users className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-bold tabular-nums leading-tight text-foreground">
+              {team.length}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Team Members
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <CheckCircle2 className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-bold tabular-nums leading-tight text-foreground">
+              {avgCompletion}%
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Avg Completion
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300">
+            <ClipboardList className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-bold tabular-nums leading-tight text-foreground">
+              {totalOpenTasks}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Open Tasks
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-xs">
+          <span
+            className={`flex size-9 items-center justify-center rounded-lg ${
+              totalOverdue > 0
+                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            <AlertTriangle className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p
+              className={`text-base font-bold tabular-nums leading-tight ${
+                totalOverdue > 0
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-foreground"
+              }`}
+            >
+              {totalOverdue}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Overdue Tasks
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Team Member Cards */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {team.map(({ user, stats }) => (
-          <Card
+          <div
             key={user.id}
-            className="transition-shadow hover:shadow-md border"
+            className="rounded-xl border bg-card shadow-xs transition-shadow hover:shadow-md"
           >
-            <CardHeader className="pb-3">
+            <div className="p-4 md:p-5">
               <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white text-sm font-semibold ${roleAvatarColors[user.role] || "bg-muted-foreground/70"}`}
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-full text-white text-sm font-semibold ${roleAvatarColors[user.role] || "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"}`}
                 >
                   {getInitials(user.name)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base font-semibold truncate">
+                  <p className="text-sm font-semibold text-foreground truncate">
                     {user.name}
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user.email}
+                  </p>
                   <Badge
                     variant="outline"
                     className={`mt-1 text-[10px] px-1.5 py-0 font-medium ${roleBadgeColors[user.role] || ""}`}
@@ -424,69 +451,76 @@ export default function TeamPage() {
                   </Badge>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-0">
-              {/* Progress bar */}
-              <div>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Completion Rate</span>
-                  <span className="font-medium">{stats.completionRate}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-green-500 transition-all"
-                    style={{ width: `${stats.completionRate}%` }}
-                  />
-                </div>
-              </div>
 
-              {/* Stats grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total</span>
-                  <span className="font-medium">{stats.totalTasks}</span>
+              <div className="mt-4 space-y-4">
+                {/* Progress bar */}
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Completion Rate</span>
+                    <span className="font-medium tabular-nums text-brand-700 dark:text-brand-300">
+                      {stats.completionRate}%
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-emerald-500 transition-all"
+                      style={{ width: `${stats.completionRate}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Completed</span>
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    {stats.completedTasks}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">In Progress</span>
-                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                    {stats.inProgressTasks}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Overdue</span>
-                  <span
-                    className={`font-medium ${stats.overdueTasks > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}
-                  >
-                    {stats.overdueTasks}
-                  </span>
-                </div>
-              </div>
 
-              {/* Emails + action */}
-              <div className="flex items-center justify-between border-t pt-3">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" />
-                  <span>{stats.emailsHandled} emails sent</span>
+                {/* Stats grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-medium tabular-nums">
+                      {stats.totalTasks}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Completed</span>
+                    <span className="font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {stats.completedTasks}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">In Progress</span>
+                    <span className="font-medium tabular-nums text-blue-600 dark:text-blue-400">
+                      {stats.inProgressTasks}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Overdue</span>
+                    <span
+                      className={`font-medium tabular-nums ${stats.overdueTasks > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}
+                    >
+                      {stats.overdueTasks}
+                    </span>
+                  </div>
                 </div>
-                <Link href="/dashboard/hr/tasks">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-100/70 dark:hover:bg-brand-900/40"
-                  >
-                    View Tasks
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </Button>
-                </Link>
+
+                {/* Emails + action */}
+                <div className="flex items-center justify-between border-t border-border pt-3">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span className="tabular-nums">
+                      {stats.emailsHandled} emails sent
+                    </span>
+                  </div>
+                  <Link href="/dashboard/hr/tasks">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-950/40"
+                    >
+                      View Tasks
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 

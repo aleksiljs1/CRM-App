@@ -303,7 +303,7 @@ export function LiveTaskProgress({
                 return (
                   <li
                     key={task.id}
-                    className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-muted/40"
+                    className="flex items-start gap-3 md:gap-4 px-3 md:px-5 py-4 transition-colors hover:bg-muted/40"
                   >
                     <span
                       className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${status.chip}`}

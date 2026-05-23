@@ -273,7 +273,7 @@ function ChatModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex h-[600px] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div className="flex h-[80vh] md:h-[600px] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
