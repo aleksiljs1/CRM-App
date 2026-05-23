@@ -165,7 +165,6 @@ export function AppSidebar() {
               {session?.user?.role ?? ""}
             </p>
           </div>
-          <NotificationBell />
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
