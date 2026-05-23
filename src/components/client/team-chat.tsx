@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ChevronDown,
+  ChevronRight,
   Loader2,
   MessageSquare,
   Send,
@@ -62,10 +64,29 @@ function timeShort(date: string): string {
 
 // ── Outer section: header + contact cards + modal mount ─────────────────────
 
-export function TeamChatSection() {
+interface TeamChatSectionProps {
+  /** Controlled expanded state. When true, the contact list is shown. */
+  expanded?: boolean;
+  /** Called when the user clicks the header to toggle. */
+  onToggle?: () => void;
+}
+
+export function TeamChatSection({
+  expanded: expandedProp,
+  onToggle,
+}: TeamChatSectionProps = {}) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
+  // If no controlled prop is passed we fall back to internal state so the
+  // component still works standalone.
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isControlled = expandedProp !== undefined;
+  const expanded = isControlled ? expandedProp : internalExpanded;
+  const handleToggle = () => {
+    if (onToggle) onToggle();
+    if (!isControlled) setInternalExpanded((v) => !v);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -87,32 +108,43 @@ export function TeamChatSection() {
 
   return (
     <section>
-      <div className="flex items-center gap-1.5">
-        <Users className="size-3 text-muted-foreground" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-          Talk to your team
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-expanded={expanded}
+        className="flex w-full items-center justify-between gap-1.5 rounded-md p-1.5 transition-colors hover:bg-muted/50"
+      >
+        <span className="flex items-center gap-1.5">
+          <Users className="size-3 text-muted-foreground" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Talk to your team
+          </span>
         </span>
-      </div>
+        {expanded ? (
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="size-3.5 text-muted-foreground" />
+        )}
+      </button>
 
-      {loading ? (
-        <div className="mt-3 flex items-center justify-center rounded-xl border bg-card py-10 shadow-sm">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      {!expanded ? null : loading ? (
+        <div className="mt-3 flex items-center justify-center rounded-xl border bg-card py-6 shadow-sm">
+          <Loader2 className="size-4 animate-spin text-muted-foreground" />
         </div>
       ) : contacts.length === 0 ? (
-        <div className="mt-3 rounded-xl border bg-card p-6 text-center shadow-sm">
-          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
-            <MessageSquare className="size-6 text-muted-foreground" />
+        <div className="mt-3 rounded-xl border bg-card p-4 text-center shadow-sm">
+          <span className="mx-auto mb-2 flex size-9 items-center justify-center rounded-xl bg-muted">
+            <MessageSquare className="size-4 text-muted-foreground" />
           </span>
-          <p className="text-sm font-medium text-foreground">
+          <p className="text-xs font-medium text-foreground">
             No team contacts yet
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Once your account has a manager or open tasks, the people you can
-            chat with will appear here.
+          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            Once you have a manager or open tasks, your contacts will appear here.
           </p>
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-3 flex flex-col gap-1.5">
           {contacts.map((c) => (
             <ContactCard
               key={`${c.user.id}-${c.relationship}`}
@@ -142,40 +174,25 @@ function ContactCard({
   contact: Contact;
   onMessage: () => void;
 }) {
-  const isManager = contact.relationship === "manager";
   return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+    <button
+      type="button"
+      onClick={onMessage}
+      className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-xs transition-colors hover:bg-muted/40"
+    >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
         {getInitials(contact.user.name)}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {contact.user.name}
-          </p>
-          <span
-            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-              isManager
-                ? "bg-brand-100/70 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-            }`}
-          >
-            {contact.user.role}
-          </span>
-        </div>
+        <p className="truncate text-sm font-semibold text-foreground">
+          {contact.user.name}
+        </p>
         <p className="truncate text-xs text-muted-foreground">
           {contact.context}
         </p>
       </div>
-      <Button
-        size="sm"
-        onClick={onMessage}
-        className="shrink-0 gap-1.5 bg-brand-600 text-white hover:bg-brand-700"
-      >
-        <MessageSquare className="size-3.5" />
-        Message
-      </Button>
-    </div>
+      <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+    </button>
   );
 }
 

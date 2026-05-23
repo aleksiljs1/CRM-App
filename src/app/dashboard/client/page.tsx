@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   Sparkles,
-  Clock,
   Upload,
   Inbox,
   FolderOpen,
@@ -15,7 +14,6 @@ import {
   FileText,
   type LucideIcon,
 } from "lucide-react";
-import { TeamChatSection } from "@/components/client/team-chat";
 import {
   LiveTaskProgress,
   type LiveTask,
@@ -24,25 +22,6 @@ import { ActionItemsPanel } from "@/components/client/action-items-panel";
 import { ClientProcessesSection } from "@/components/client/client-processes";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-
-function timeAgo(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-const SUBMISSION_STATUS_LABELS: Record<string, string> = {
-  INCOMPLETE: "Incomplete",
-  COMPLETE: "Complete",
-  UNDER_REVIEW: "Under Review",
-  APPROVED: "Approved",
-  REJECTED: "Rejected",
-};
 
 // ── Inline section primitives ──────────────────────────────────────────────
 
@@ -198,35 +177,7 @@ export default async function ClientDashboardPage() {
       : null,
   }));
 
-  // Build the "what we need from you" action item list. For every INCOMPLETE
-  // submission, find required documents that have NO matching submitted doc
-  // (via SubmittedDocument.aiMatchedToId). Each unmatched requirement becomes
-  // an action item the client must address.
-  type ActionItem = {
-    id: string;
-    requiredDocName: string;
-    processTypeName: string;
-  };
-  const actionItems: ActionItem[] = [];
-  for (const sub of submissions) {
-    if (sub.status !== "INCOMPLETE") continue;
-    const matchedIds = new Set(
-      sub.documents
-        .map((d) => d.aiMatchedToId)
-        .filter((v): v is string => Boolean(v))
-    );
-    for (const req of sub.processType.requiredDocuments) {
-      if (!matchedIds.has(req.id)) {
-        actionItems.push({
-          id: `${sub.id}:${req.id}`,
-          requiredDocName: req.documentName,
-          processTypeName: sub.processType.name,
-        });
-      }
-    }
-  }
-
-  const displayName =
+const displayName =
     client?.companyName ?? session.user.name ?? session.user.email;
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -299,102 +250,7 @@ export default async function ClientDashboardPage() {
         </div>
       </section>
 
-      {/* Talk to your team — chat with account manager + task assignees */}
-      <TeamChatSection />
-
-      {/* Recent submissions */}
-      <section>
-        <SectionLabel icon={Clock}>Recent submissions</SectionLabel>
-        <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
-          {submissions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="flex size-12 items-center justify-center rounded-xl bg-muted">
-                <Inbox className="size-6 text-muted-foreground" />
-              </span>
-              <p className="mt-3 text-sm font-medium text-foreground">
-                No active processes
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Contact your account manager to get started.
-              </p>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {submissions.slice(0, 5).map((sub) => {
-                const isAction = sub.status === "INCOMPLETE";
-                const isApproved = sub.status === "APPROVED";
-                const uploaded = sub.documents.length;
-                const required = sub.processType.requiredDocuments.length;
-                const hasRequiredList = required > 0;
-                const submissionPct = hasRequiredList
-                  ? Math.min(100, Math.round((uploaded / required) * 100))
-                  : 0;
-                return (
-                  <li
-                    key={sub.id}
-                    className="flex items-center gap-3 md:gap-4 px-3 md:px-5 py-3 transition-colors hover:bg-muted/40"
-                  >
-                    <span
-                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                        isApproved
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                          : "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
-                      }`}
-                    >
-                      {isApproved ? (
-                        <CheckCircle2 className="size-4" />
-                      ) : (
-                        <FolderOpen className="size-4" />
-                      )}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {sub.processType.name}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {uploaded}{" "}
-                        {uploaded === 1 ? "document" : "documents"}
-                        {" · "}
-                        {SUBMISSION_STATUS_LABELS[sub.status] ?? sub.status}
-                      </p>
-                      {hasRequiredList && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <div
-                            className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-                            role="progressbar"
-                            aria-valuenow={submissionPct}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label={`${sub.processType.name}: ${uploaded} of ${required} documents`}
-                          >
-                            <div
-                              className="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out dark:bg-brand-400"
-                              style={{ width: `${submissionPct}%` }}
-                            />
-                          </div>
-                          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                            {uploaded} of {required} documents
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {isAction && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                        Action needed
-                      </span>
-                    )}
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                      {timeAgo(sub.submittedAt)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      {/* Footer hint — primary upload action when there are open requests */}
+{/* Footer hint — primary upload action when there are open requests */}
       {activeSubmissions > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/40">
           <div className="flex items-start gap-3">
