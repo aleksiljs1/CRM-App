@@ -109,7 +109,7 @@ export async function GET(request: Request) {
       createdAt: a.createdAt.toISOString(),
       source: "task" as const,
       sourceLabel: `Task: ${a.task.title}`,
-      sourceLink: "/dashboard/hr/tasks",
+      sourceLink: "/dashboard/workspace/tasks",
     }));
 
     const emailDocs: UnifiedDocument[] = emailAttachments.map((a) => ({
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
       sourceLabel: a.email.isIncoming
         ? `Email from ${a.email.senderName || "Unknown"}: ${a.email.subject}`
         : `Email: ${a.email.subject}`,
-      sourceLink: "/dashboard/hr/emails",
+      sourceLink: "/dashboard/workspace/emails",
     }));
 
     const chatDocs: UnifiedDocument[] = messageAttachments.map((a) => ({
@@ -135,7 +135,7 @@ export async function GET(request: Request) {
       createdAt: a.message.createdAt.toISOString(),
       source: "chat" as const,
       sourceLabel: `Chat with ${a.message.sender.name}`,
-      sourceLink: "/dashboard/hr/chats",
+      sourceLink: "/dashboard/workspace/chats",
     }));
 
     // 4. Manual uploads
@@ -166,7 +166,7 @@ export async function GET(request: Request) {
       createdAt: a.createdAt.toISOString(),
       source: "manual" as const,
       sourceLabel: `Uploaded by ${a.uploadedBy.name}`,
-      sourceLink: "/dashboard/hr/documents",
+      sourceLink: "/dashboard/workspace/documents",
     }));
 
     let allDocs = [...taskDocs, ...emailDocs, ...chatDocs, ...manualDocs];

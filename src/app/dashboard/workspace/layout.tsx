@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const tabs = [
-  { label: "Overview", href: "/dashboard/hr" },
-  { label: "Emails", href: "/dashboard/hr/emails" },
-  { label: "Tasks", href: "/dashboard/hr/tasks" },
-  { label: "Calendar", href: "/dashboard/hr/calendar" },
-  { label: "Documents", href: "/dashboard/hr/documents" },
+  { label: "Overview", href: "/dashboard/workspace" },
+  { label: "Emails", href: "/dashboard/workspace/emails" },
+  { label: "Tasks", href: "/dashboard/workspace/tasks" },
+  { label: "Calendar", href: "/dashboard/workspace/calendar" },
+  { label: "Documents", href: "/dashboard/workspace/documents" },
 ];
 
 export default function HRLayout({ children }: { children: React.ReactNode }) {
@@ -19,8 +19,8 @@ export default function HRLayout({ children }: { children: React.ReactNode }) {
       <nav className="flex items-center gap-1 border-b mb-6">
         {tabs.map((tab) => {
           const isActive =
-            tab.href === "/dashboard/hr"
-              ? pathname === "/dashboard/hr"
+            tab.href === "/dashboard/workspace"
+              ? pathname === "/dashboard/workspace"
               : pathname.startsWith(tab.href);
           return (
             <Link

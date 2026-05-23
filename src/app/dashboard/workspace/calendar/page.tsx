@@ -324,7 +324,7 @@ export default function HRCalendarPage() {
               </button>
             </div>
           )}
-          <Link href="/dashboard/hr/tasks" className="w-full sm:w-auto">
+          <Link href="/dashboard/workspace/tasks" className="w-full sm:w-auto">
             <Button className="gap-2 bg-brand-600 text-white hover:bg-brand-700 w-full sm:w-auto">
               <LayoutGrid className="size-4" />
               View Kanban
@@ -612,7 +612,7 @@ export default function HRCalendarPage() {
                         </div>
                       </div>
                       <Link
-                        href="/dashboard/hr/tasks"
+                        href="/dashboard/workspace/tasks"
                         className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium text-brand-600 transition-colors hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                       >
                         View on board

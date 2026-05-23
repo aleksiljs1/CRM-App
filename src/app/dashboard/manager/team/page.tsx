@@ -635,7 +635,7 @@ export default function TeamPage() {
                   <Mail className="h-3.5 w-3.5" />
                   <span>{stats.emailsHandled} emails sent</span>
                 </div>
-                <Link href="/dashboard/hr/tasks">
+                <Link href="/dashboard/workspace/tasks">
                   <Button
                     variant="ghost"
                     size="sm"

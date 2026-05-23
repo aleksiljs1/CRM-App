@@ -615,7 +615,7 @@ export default async function ManagerDashboardPage() {
         <div className="flex items-center justify-between">
           <SectionLabel icon={CalendarDays}>Upcoming deadlines</SectionLabel>
           <Link
-            href="/dashboard/hr/tasks"
+            href="/dashboard/workspace/tasks"
             className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
           >
             View all &rarr;

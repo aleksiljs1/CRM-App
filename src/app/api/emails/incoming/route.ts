@@ -157,7 +157,7 @@ export async function POST(request: Request) {
           title: "New Email",
           message: `From ${senderName}: ${subject}`,
           type: "EMAIL" as const,
-          link: `/dashboard/hr/emails`,
+          link: `/dashboard/workspace/emails`,
         })),
       });
     }
