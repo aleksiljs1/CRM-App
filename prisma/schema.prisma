@@ -95,6 +95,7 @@ model User {
   notifications    Notification[]
   conversations    ConversationParticipant[]
   sentMessages     Message[] @relation("SentMessages")
+  manualDocuments  ManualDocument[] @relation("ManualDocuments")
 
   @@index([email])
   @@index([role])
@@ -392,4 +393,21 @@ model MessageAttachment {
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
+}
+
+model ManualDocument {
+  id         String      @id @default(cuid())
+  fileName   String
+  filePath   String
+  fileSize   Int
+  mimeType   String
+  department Department?
+  uploadedById String
+  createdAt  DateTime    @default(now())
+
+  uploadedBy User @relation("ManualDocuments", fields: [uploadedById], references: [id])
+
+  @@index([department])
+  @@index([uploadedById])
+  @@index([createdAt])
 }

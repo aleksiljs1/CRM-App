@@ -7,8 +7,7 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (!socket) {
     socket = io({
-      path: "/api/socketio",
-      addTrailingSlash: false,
+      path: "/socket.io",
     });
 
     socket.on("connect", () => {
@@ -19,8 +18,8 @@ export function getSocket(): Socket {
       console.log("[Socket.io Client] Disconnected:", reason);
     });
 
-    socket.on("connect_error", (err) => {
-      console.error("[Socket.io Client] Connection error:", err.message);
+    socket.on("connect_error", () => {
+      // Silently retry - socket.io auto-reconnects
     });
   }
   return socket;

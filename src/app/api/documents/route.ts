@@ -1,6 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
 
 interface UnifiedDocument {
   id: string;
@@ -9,7 +11,7 @@ interface UnifiedDocument {
   fileSize: number;
   mimeType: string;
   createdAt: string;
-  source: "task" | "email" | "chat";
+  source: "task" | "email" | "chat" | "manual";
   sourceLabel: string;
   sourceLink: string;
 }
@@ -136,7 +138,38 @@ export async function GET(request: Request) {
       sourceLink: "/dashboard/hr/chats",
     }));
 
-    let allDocs = [...taskDocs, ...emailDocs, ...chatDocs];
+    // 4. Manual uploads
+    const manualAttachments =
+      sourceFilter && sourceFilter !== "manual"
+        ? []
+        : await prisma.manualDocument.findMany({
+            where: department
+              ? {
+                  OR: [
+                    { uploadedById: userId },
+                    { department: department as any },
+                  ],
+                }
+              : { uploadedById: userId },
+            include: {
+              uploadedBy: { select: { name: true } },
+            },
+            orderBy: { createdAt: "desc" },
+          });
+
+    const manualDocs: UnifiedDocument[] = manualAttachments.map((a) => ({
+      id: a.id,
+      fileName: a.fileName,
+      filePath: a.filePath,
+      fileSize: a.fileSize,
+      mimeType: a.mimeType,
+      createdAt: a.createdAt.toISOString(),
+      source: "manual" as const,
+      sourceLabel: `Uploaded by ${a.uploadedBy.name}`,
+      sourceLink: "/dashboard/hr/documents",
+    }));
+
+    let allDocs = [...taskDocs, ...emailDocs, ...chatDocs, ...manualDocs];
 
     // Apply search filter
     if (searchQuery) {
@@ -199,13 +232,62 @@ export async function GET(request: Request) {
       task: allDocs.filter((d) => d.source === "task").length,
       email: allDocs.filter((d) => d.source === "email").length,
       chat: allDocs.filter((d) => d.source === "chat").length,
+      manual: allDocs.filter((d) => d.source === "manual").length,
     };
 
     return Response.json({ documents: allDocs, counts });
-  } catch (error) {
-    console.error("Error fetching documents:", error);
+  } catch (error: any) {
+    console.error("Error fetching documents:", error?.message || error);
     return Response.json(
-      { error: "Failed to fetch documents" },
+      { error: "Failed to fetch documents", detail: error?.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const files = formData.getAll("files") as File[];
+
+    if (!files || files.length === 0) {
+      return Response.json({ error: "No files provided" }, { status: 400 });
+    }
+
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "documents");
+    await mkdir(uploadDir, { recursive: true });
+
+    const created = [];
+
+    for (const file of files) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uniqueName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const filePath = path.join(uploadDir, uniqueName);
+      await writeFile(filePath, buffer);
+
+      const doc = await prisma.manualDocument.create({
+        data: {
+          fileName: file.name,
+          filePath: `uploads/documents/${uniqueName}`,
+          fileSize: file.size,
+          mimeType: file.type || "application/octet-stream",
+          department: session.user.department || null,
+          uploadedById: session.user.id,
+        },
+      });
+      created.push(doc);
+    }
+
+    return Response.json({ documents: created, count: created.length });
+  } catch (error) {
+    console.error("Error uploading documents:", error);
+    return Response.json(
+      { error: "Failed to upload documents" },
       { status: 500 }
     );
   }

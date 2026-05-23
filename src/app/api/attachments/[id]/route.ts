@@ -30,7 +30,12 @@ export async function GET(
         ? null
         : await prisma.messageAttachment.findUnique({ where: { id } });
 
-    const attachment = emailAttachment ?? taskAttachment ?? messageAttachment;
+    const manualDocument =
+      emailAttachment || taskAttachment || messageAttachment
+        ? null
+        : await prisma.manualDocument.findUnique({ where: { id } });
+
+    const attachment = emailAttachment ?? taskAttachment ?? messageAttachment ?? manualDocument;
 
     if (!attachment) {
       return Response.json(
