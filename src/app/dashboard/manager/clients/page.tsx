@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Search,
   Users,
@@ -13,6 +17,11 @@ import {
   FileText,
   Clock,
   Building2,
+  Plus,
+  X,
+  Loader2,
+  CheckCircle2,
+  Copy,
 } from "lucide-react";
 
 interface ClientData {
@@ -30,6 +39,13 @@ interface ClientData {
   submissions: { id: string; status: string; processType: { id: string; name: string; department: string } }[];
   tasks: { id: string; status: string; priority: string; deadline: string | null }[];
   emails: { id: string; isIncoming: boolean; isReplied: boolean; createdAt: string }[];
+}
+
+interface AssignableUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 function timeAgo(dateStr: string): string {
@@ -132,27 +148,375 @@ const COLUMNS = [
   },
 ];
 
+// ─── Invite Client Modal ────────────────────────────────────────────────────
+
+function InviteClientModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [companyName, setCompanyName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [assignedToId, setAssignedToId] = useState("");
+  const [assignees, setAssignees] = useState<AssignableUser[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [credentials, setCredentials] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
+
+  // Load assignable users (ADMIN/PARTNER/MANAGER) from /api/chat/users.
+  // That endpoint excludes CLIENT users; we further filter to manager-tier roles client-side.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAssignees() {
+      try {
+        const res = await fetch("/api/chat/users");
+        if (!res.ok) return;
+        const data: { users: AssignableUser[] } = await res.json();
+        if (cancelled) return;
+        const filtered = (data.users ?? []).filter((u) =>
+          ["ADMIN", "PARTNER", "MANAGER"].includes(u.role)
+        );
+        setAssignees(filtered);
+      } catch {
+        // non-fatal — the field is optional
+      }
+    }
+    loadAssignees();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (
+      !companyName.trim() ||
+      !contactName.trim() ||
+      !contactEmail.trim()
+    ) {
+      setFormError("Company name, contact name, and contact email are required");
+      return;
+    }
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const res = await fetch("/api/clients/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: companyName.trim(),
+          contactName: contactName.trim(),
+          contactEmail: contactEmail.trim(),
+          phone: phone.trim() || undefined,
+          industry: industry.trim() || undefined,
+          assignedToId: assignedToId || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFormError(
+          (data as { error?: string }).error || "Failed to invite client"
+        );
+        return;
+      }
+      const creds = (data as { credentials?: { email: string; password: string } })
+        .credentials;
+      if (creds) {
+        setCredentials(creds);
+      } else {
+        setFormError("Server did not return credentials");
+      }
+    } catch {
+      setFormError("Failed to invite client");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function copyToClipboard(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  }
+
+  function handleDone() {
+    onCreated();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-xl border border-border shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        {credentials ? (
+          // ── Credentials view ──────────────────────────────────────────
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-foreground">
+                Client account created
+              </h2>
+              <button
+                type="button"
+                onClick={handleDone}
+                className="p-1 hover:bg-muted rounded"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-start gap-3 mb-5 p-3 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800">
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-green-700 dark:text-green-300">
+                The client&apos;s sign-in credentials are shown below. They
+                will not be visible again after you close this dialog.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="cred-email" className="mb-1 block">
+                  Email
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cred-email"
+                    readOnly
+                    value={credentials.email}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => copyToClipboard(credentials.email, "Email")}
+                    aria-label="Copy email"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="cred-password" className="mb-1 block">
+                  Temporary password
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cred-password"
+                    readOnly
+                    value={credentials.password}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      copyToClipboard(credentials.password, "Password")
+                    }
+                    aria-label="Copy password"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Share these with the client. They can sign in at{" "}
+                <span className="font-mono">/login</span>. Recommend they
+                change their password after first sign-in.
+              </p>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <Button
+                type="button"
+                onClick={handleDone}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          // ── Form view ─────────────────────────────────────────────────
+          <form onSubmit={handleSubmit} className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-foreground">
+                Invite a new client
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 hover:bg-muted rounded"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                {formError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="invite-company" className="mb-1 block">
+                  Company name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="invite-company"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Acme Holdings sh.p.k."
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="invite-contact" className="mb-1 block">
+                  Contact name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="invite-contact"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Jane Doe"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="invite-email" className="mb-1 block">
+                  Contact email <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="jane@acme.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="invite-phone" className="mb-1 block">
+                  Phone
+                </Label>
+                <Input
+                  id="invite-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+355 ..."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="invite-industry" className="mb-1 block">
+                  Industry
+                </Label>
+                <Input
+                  id="invite-industry"
+                  value={industry}
+                  onChange={(e) => setIndustry(e.target.value)}
+                  placeholder="Retail, Manufacturing, ..."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="invite-assignee" className="mb-1 block">
+                  Assign to
+                </Label>
+                <select
+                  id="invite-assignee"
+                  value={assignedToId}
+                  onChange={(e) => setAssignedToId(e.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                >
+                  <option value="">Unassigned</option>
+                  {assignees.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Optional. Only ADMIN, PARTNER, and MANAGER users are listed.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  submitting ||
+                  !companyName.trim() ||
+                  !contactName.trim() ||
+                  !contactEmail.trim()
+                }
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-1" />
+                )}
+                Create client
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ──────────────────────────────────────────────────────────────
+
 export default function ClientPipelinePage() {
+  const router = useRouter();
   const [clients, setClients] = useState<ClientData[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showInvite, setShowInvite] = useState(false);
+
+  const fetchClients = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clients");
+      if (res.ok) {
+        const data = await res.json();
+        setClients(data.clients);
+      }
+    } catch (err) {
+      console.error("Failed to fetch clients:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchClients() {
-      try {
-        const res = await fetch("/api/clients");
-        if (res.ok) {
-          const data = await res.json();
-          setClients(data.clients);
-        }
-      } catch (err) {
-        console.error("Failed to fetch clients:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchClients();
-  }, []);
+  }, [fetchClients]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return clients;
@@ -183,11 +547,20 @@ export default function ClientPipelinePage() {
   return (
     <div className="flex h-full flex-col gap-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Client Pipeline</h1>
-        <p className="text-sm text-muted-foreground">
-          Track clients from first contact to active engagement
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Client Pipeline</h1>
+          <p className="text-sm text-muted-foreground">
+            Track clients from first contact to active engagement
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowInvite(true)}
+          className="bg-brand-600 hover:bg-brand-700 text-white"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          New client
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -264,6 +637,16 @@ export default function ClientPipelinePage() {
           );
         })}
       </div>
+
+      {showInvite && (
+        <InviteClientModal
+          onClose={() => setShowInvite(false)}
+          onCreated={() => {
+            fetchClients();
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

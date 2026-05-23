@@ -383,6 +383,37 @@ export async function PATCH(
       console.error("Error creating notification:", notifError);
     }
 
+    // ── Real-time: notify the client (if this task is tied to a client) ──
+    // Emit task-progress to the linked client user's personal room so their
+    // dashboard can update the progress ring + per-task bar without a reload.
+    // Failures are intentionally swallowed — sockets should never break the
+    // PATCH response contract.
+    if (status && updated.clientId) {
+      try {
+        const io = (globalThis as any).io;
+        if (io) {
+          const taskClient = await prisma.client.findUnique({
+            where: { id: updated.clientId },
+            select: { contactEmail: true },
+          });
+          if (taskClient?.contactEmail) {
+            const clientUser = await prisma.user.findUnique({
+              where: { email: taskClient.contactEmail },
+              select: { id: true },
+            });
+            if (clientUser) {
+              io.to(`user:${clientUser.id}`).emit("task-progress", {
+                taskId: updated.id,
+                status: updated.status,
+              });
+            }
+          }
+        }
+      } catch (socketError) {
+        console.error("Error emitting task-progress event:", socketError);
+      }
+    }
+
     return Response.json({ task: updated });
   } catch (error) {
     console.error("Error updating task:", error);

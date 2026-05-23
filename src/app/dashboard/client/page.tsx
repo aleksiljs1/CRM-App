@@ -5,29 +5,23 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
-  Mail,
-  MessageSquare,
-  FileText,
-  Upload,
   Sparkles,
-  Activity,
-  Zap,
   Clock,
-  ArrowRight,
-  LineChart,
-  CheckCircle2,
-  ClipboardList,
+  Upload,
   Inbox,
-  UserCircle,
-  CalendarClock,
-  Gauge,
   FolderOpen,
+  CheckCircle2,
+  AlertCircle,
   type LucideIcon,
 } from "lucide-react";
+import { TeamChatSection } from "@/components/client/team-chat";
 import {
-  EmailsAreaChart,
-  TasksAreaChart,
-} from "@/components/dashboard/activity-charts";
+  LiveTaskProgress,
+  type LiveTask,
+} from "@/components/client/live-task-progress";
+import { ActionItemsPanel } from "@/components/client/action-items-panel";
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -40,7 +34,7 @@ function timeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-const statusLabels: Record<string, string> = {
+const SUBMISSION_STATUS_LABELS: Record<string, string> = {
   INCOMPLETE: "Incomplete",
   COMPLETE: "Complete",
   UNDER_REVIEW: "Under Review",
@@ -48,7 +42,7 @@ const statusLabels: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
-// ── Inline section primitives ───────────────────────────────────────────────
+// ── Inline section primitives ──────────────────────────────────────────────
 
 function SectionLabel({
   icon: Icon,
@@ -91,65 +85,7 @@ function InsightCard({
   );
 }
 
-function SmallStat({
-  icon: Icon,
-  iconBg,
-  iconText,
-  value,
-  label,
-}: {
-  icon: LucideIcon;
-  iconBg: string;
-  iconText: string;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm">
-      <span
-        className={`flex size-9 items-center justify-center rounded-lg ${iconBg} ${iconText}`}
-      >
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-base font-bold tabular-nums leading-tight text-foreground">
-          {value}
-        </p>
-        <p className="truncate text-[11px] text-muted-foreground">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function QuickAction({
-  href,
-  icon: Icon,
-  title,
-  subtitle,
-}: {
-  href: string;
-  icon: LucideIcon;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300/60 hover:shadow-md"
-    >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
-        <Icon className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-foreground">{title}</p>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
-      </div>
-      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-    </Link>
-  );
-}
-
-// ── Page ────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────
 
 export default async function ClientDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -160,20 +96,35 @@ export default async function ClientDashboardPage() {
 
   const client = await prisma.client.findFirst({
     where: { contactEmail: session.user.email },
-  });
-
-  const submissions = client
-    ? await prisma.clientSubmission.findMany({
-        where: { clientId: client.id },
+    include: {
+      assignedTo: {
+        select: { id: true, name: true, role: true },
+      },
+      submissions: {
         include: {
-          processType: true,
+          processType: {
+            include: {
+              requiredDocuments: true,
+            },
+          },
           documents: true,
         },
         orderBy: { submittedAt: "desc" },
-      })
-    : [];
+      },
+      tasks: {
+        include: {
+          assignedTo: {
+            select: { id: true, name: true, role: true },
+          },
+        },
+      },
+    },
+  });
 
-  // Derived metrics from the data we already fetched (no new queries).
+  const submissions = client?.submissions ?? [];
+  const allTasks = client?.tasks ?? [];
+
+  // Derived metrics — all from real data, no demo numbers
   const activeSubmissions = submissions.filter(
     (s) => s.status === "INCOMPLETE" || s.status === "UNDER_REVIEW"
   ).length;
@@ -181,12 +132,53 @@ export default async function ClientDashboardPage() {
     (sum, s) => sum + s.documents.length,
     0
   );
-  const openRequests = submissions.filter(
-    (s) => s.status === "INCOMPLETE"
-  ).length;
+  const openTasks = allTasks.filter((t) => t.status !== "COMPLETED").length;
   const approvedCount = submissions.filter(
     (s) => s.status === "APPROVED"
   ).length;
+
+  // Serialize tasks for the client component (Dates -> ISO strings)
+  const liveTasks: LiveTask[] = allTasks.map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: t.status,
+    deadline: t.deadline ? t.deadline.toISOString() : null,
+    assignedTo: t.assignedTo
+      ? {
+          id: t.assignedTo.id,
+          name: t.assignedTo.name,
+          role: t.assignedTo.role,
+        }
+      : null,
+  }));
+
+  // Build the "what we need from you" action item list. For every INCOMPLETE
+  // submission, find required documents that have NO matching submitted doc
+  // (via SubmittedDocument.aiMatchedToId). Each unmatched requirement becomes
+  // an action item the client must address.
+  type ActionItem = {
+    id: string;
+    requiredDocName: string;
+    processTypeName: string;
+  };
+  const actionItems: ActionItem[] = [];
+  for (const sub of submissions) {
+    if (sub.status !== "INCOMPLETE") continue;
+    const matchedIds = new Set(
+      sub.documents
+        .map((d) => d.aiMatchedToId)
+        .filter((v): v is string => Boolean(v))
+    );
+    for (const req of sub.processType.requiredDocuments) {
+      if (!matchedIds.has(req.id)) {
+        actionItems.push({
+          id: `${sub.id}:${req.id}`,
+          requiredDocName: req.documentName,
+          processTypeName: sub.processType.name,
+        });
+      }
+    }
+  }
 
   const displayName =
     client?.companyName ?? session.user.name ?? session.user.email;
@@ -199,28 +191,31 @@ export default async function ClientDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page title row */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-brand-700">
-            Welcome, {displayName}
-          </h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Your client portal &middot; {today}
-          </p>
-        </div>
-        <Link href="/dashboard/client">
-          <Button className="gap-2">
-            <Upload className="size-4" />
-            Upload Documents
-          </Button>
-        </Link>
-      </div>
+      {/* Page header */}
+      <header>
+        <h1 className="text-lg font-semibold tracking-tight text-brand-700">
+          Welcome, {displayName}
+        </h1>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          Your client portal &middot; {today}
+        </p>
+      </header>
 
-      {/* ── Section 1 — Insights ──────────────────────────────────────── */}
+      {/* Overall progress headline + Your active work — both live-updating */}
+      <LiveTaskProgress initialTasks={liveTasks} />
+
+      {/* What we need from you — unmatched required docs across INCOMPLETE
+          submissions. Slotted high so it's the first thing a returning client
+          sees after their progress ring. */}
+      <section>
+        <SectionLabel icon={AlertCircle}>What we need from you</SectionLabel>
+        <ActionItemsPanel items={actionItems} />
+      </section>
+
+      {/* Overview — 4 real metrics */}
       <section>
         <SectionLabel icon={Sparkles}>Overview</SectionLabel>
-        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <InsightCard
             accent="border-t-brand-500"
             value={activeSubmissions}
@@ -228,16 +223,16 @@ export default async function ClientDashboardPage() {
             subtitle="Processes currently in progress"
           />
           <InsightCard
+            accent="border-t-amber-500"
+            value={openTasks}
+            label="Open Work"
+            subtitle="Tasks the firm is working on for you"
+          />
+          <InsightCard
             accent="border-t-emerald-500"
             value={totalDocuments}
             label="Documents Uploaded"
             subtitle="Across all your submissions"
-          />
-          <InsightCard
-            accent="border-t-amber-500"
-            value={openRequests}
-            label="Open Requests"
-            subtitle="Items still needing your input"
           />
           <InsightCard
             accent="border-t-violet-500"
@@ -248,128 +243,12 @@ export default async function ClientDashboardPage() {
         </div>
       </section>
 
-      {/* ── Section 2 — Platform overview strip ──────────────────────── */}
+      {/* Talk to your team — chat with account manager + task assignees */}
+      <TeamChatSection />
+
+      {/* Recent submissions */}
       <section>
-        <SectionLabel icon={Activity}>Platform</SectionLabel>
-        <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <SmallStat
-            icon={Clock}
-            iconBg="bg-cyan-100 dark:bg-cyan-900/40"
-            iconText="text-cyan-700 dark:text-cyan-300"
-            value="2h 30m" /* demo */
-            label="Avg response from your team"
-          />
-          <SmallStat
-            icon={CalendarClock}
-            iconBg="bg-amber-100 dark:bg-amber-900/40"
-            iconText="text-amber-700 dark:text-amber-300"
-            value="Jun 15" /* demo */
-            label="Next deadline"
-          />
-          <SmallStat
-            icon={CheckCircle2}
-            iconBg="bg-emerald-100 dark:bg-emerald-900/40"
-            iconText="text-emerald-700 dark:text-emerald-300"
-            value="100%" /* demo */
-            label="Submissions on track"
-          />
-          <SmallStat
-            icon={Gauge}
-            iconBg="bg-violet-100 dark:bg-violet-900/40"
-            iconText="text-violet-700 dark:text-violet-300"
-            value="Active" /* demo */
-            label="Account status"
-          />
-        </div>
-      </section>
-
-      {/* ── Trends — two charts side by side ────────────────────────── */}
-      <section>
-        <SectionLabel icon={LineChart}>Trends</SectionLabel>
-        <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Messages received
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Last 14 days
-                </p>
-              </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                &uarr; 12%
-              </span>
-            </div>
-            <div className="mt-4 -ml-2">
-              <EmailsAreaChart />
-            </div>
-          </div>
-
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Submissions activity
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Last 14 days
-                </p>
-              </div>
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                &uarr; 8%
-              </span>
-            </div>
-            <div className="mt-4 -ml-2">
-              <TasksAreaChart />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Section 4 — Quick actions ────────────────────────────────── */}
-      <section>
-        <SectionLabel icon={Zap}>Quick actions</SectionLabel>
-        <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <QuickAction
-            href="/dashboard/client"
-            icon={MessageSquare}
-            title="View Messages"
-            subtitle="Communication from your team"
-          />
-          <QuickAction
-            href="/dashboard/client"
-            icon={Upload}
-            title="Upload Documents"
-            subtitle="Send files securely"
-          />
-          <QuickAction
-            href="/dashboard/client"
-            icon={ClipboardList}
-            title="View Submissions"
-            subtitle="Track your active processes"
-          />
-          <QuickAction
-            href="/dashboard/client"
-            icon={UserCircle}
-            title="Contact Manager"
-            subtitle="Reach your account representative"
-          />
-        </div>
-      </section>
-
-      {/* ── Section 5 — Recent activity ──────────────────────────────── */}
-      <section>
-        <div className="flex items-center justify-between">
-          <SectionLabel icon={Clock}>Recent activity</SectionLabel>
-          <Link
-            href="/dashboard/client"
-            className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
-          >
-            View all &rarr;
-          </Link>
-        </div>
-
+        <SectionLabel icon={Clock}>Recent submissions</SectionLabel>
         <div className="mt-3 overflow-hidden rounded-xl border bg-card shadow-sm">
           {submissions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -380,46 +259,77 @@ export default async function ClientDashboardPage() {
                 No active processes
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Contact your representative to get started.
+                Contact your account manager to get started.
               </p>
             </div>
           ) : (
-            <ul>
-              {submissions.slice(0, 5).map((sub, idx) => {
-                const isUrgent = sub.status === "INCOMPLETE";
+            <ul className="divide-y">
+              {submissions.slice(0, 5).map((sub) => {
+                const isAction = sub.status === "INCOMPLETE";
+                const isApproved = sub.status === "APPROVED";
+                const uploaded = sub.documents.length;
+                const required = sub.processType.requiredDocuments.length;
+                const hasRequiredList = required > 0;
+                const submissionPct = hasRequiredList
+                  ? Math.min(100, Math.round((uploaded / required) * 100))
+                  : 0;
                 return (
-                  <li key={sub.id}>
-                    <Link
-                      href="/dashboard/client"
-                      className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40 ${
-                        idx > 0 ? "border-t" : ""
+                  <li
+                    key={sub.id}
+                    className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40"
+                  >
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                        isApproved
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                          : "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
                       }`}
                     >
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+                      {isApproved ? (
+                        <CheckCircle2 className="size-4" />
+                      ) : (
                         <FolderOpen className="size-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {sub.processType.name}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {sub.documents.length}{" "}
-                          {sub.documents.length === 1
-                            ? "document"
-                            : "documents"}{" "}
-                          &middot;{" "}
-                          {statusLabels[sub.status] ?? sub.status}
-                        </p>
-                      </div>
-                      {isUrgent && (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                          Action needed
-                        </span>
                       )}
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                        {timeAgo(sub.submittedAt)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {sub.processType.name}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {uploaded}{" "}
+                        {uploaded === 1 ? "document" : "documents"}
+                        {" · "}
+                        {SUBMISSION_STATUS_LABELS[sub.status] ?? sub.status}
+                      </p>
+                      {hasRequiredList && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div
+                            className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-valuenow={submissionPct}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${sub.processType.name}: ${uploaded} of ${required} documents`}
+                          >
+                            <div
+                              className="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out dark:bg-brand-400"
+                              style={{ width: `${submissionPct}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                            {uploaded} of {required} documents
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {isAction && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        Action needed
                       </span>
-                    </Link>
+                    )}
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {timeAgo(sub.submittedAt)}
+                    </span>
                   </li>
                 );
               })}
@@ -427,6 +337,32 @@ export default async function ClientDashboardPage() {
           )}
         </div>
       </section>
+
+      {/* Footer hint — primary upload action when there are open requests */}
+      {activeSubmissions > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/40">
+          <div className="flex items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+              <Upload className="size-4" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                You have {activeSubmissions} active submission
+                {activeSubmissions === 1 ? "" : "s"}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                If your team has asked for documents, you can upload them here.
+              </p>
+            </div>
+            <Link href="/dashboard/client">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Upload className="size-3.5" />
+                Upload
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
