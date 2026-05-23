@@ -25,6 +25,8 @@ import {
   MessageSquare,
   Send,
   Calendar,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -474,12 +476,14 @@ function TaskDetailModal({
   onClose,
   onStatusChange,
   onAssignReviewer,
+  onDelete,
   userRole,
 }: {
   task: Task;
   onClose: () => void;
   onStatusChange: (taskId: string, newStatus: string) => void;
   onAssignReviewer: (taskId: string, reviewerId: string) => void;
+  onDelete: (taskId: string) => void;
   userRole: string;
 }) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -736,6 +740,16 @@ function TaskDetailModal({
                 Reset to To Do
               </Button>
             )}
+            {isManagerPlusRole && (
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950"
+                onClick={() => onDelete(task.id)}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete Task
+              </Button>
+            )}
           </div>
 
           <Separator className="my-4" />
@@ -846,6 +860,7 @@ function NewTaskForm({
   const [taskAttachments, setTaskAttachments] = useState<File[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [aiAssigning, setAiAssigning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -873,6 +888,39 @@ function NewTaskForm({
 
   function removeFile(index: number) {
     setTaskAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleAiAssign() {
+    setAiAssigning(true);
+    try {
+      const { data } = await axios.post("/api/tasks/ai-assign", {
+        taskTitle: title,
+        taskDescription: description,
+        taskPriority: priority,
+      });
+      if (data.recommendation?.userId) {
+        // Verify the user exists in the dropdown options
+        const found = teamMembers.find((tm) => tm.user.id === data.recommendation.userId);
+        if (found) {
+          setAssignToId(data.recommendation.userId);
+        } else {
+          // AI returned a valid user but team list might not have them - try by name
+          const byName = teamMembers.find((tm) =>
+            tm.user.name.toLowerCase() === data.recommendation.name?.toLowerCase()
+          );
+          if (byName) {
+            setAssignToId(byName.user.id);
+          } else {
+            console.warn("[AI-ASSIGN] User not found in dropdown:", data.recommendation);
+          }
+        }
+        toast.success(`AI suggests: ${data.recommendation.name} — ${data.recommendation.reason}`);
+      }
+    } catch {
+      toast.error("AI assignment failed");
+    } finally {
+      setAiAssigning(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -976,9 +1024,26 @@ function NewTaskForm({
 
             {/* Assign to dropdown */}
             <div>
-              <label className="text-sm font-medium text-foreground/80 mb-1 block">
-                Assign to
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-foreground/80">
+                  Assign to
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={aiAssigning}
+                  onClick={handleAiAssign}
+                  className="gap-1.5 text-xs border-brand-300 text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-950"
+                >
+                  {aiAssigning ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
+                  {aiAssigning ? "Thinking..." : "Assign with AI"}
+                </Button>
+              </div>
               <select
                 value={assignToId}
                 onChange={(e) => setAssignToId(e.target.value)}
@@ -1410,6 +1475,17 @@ export default function HRTasksPage() {
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleStatusChange}
           onAssignReviewer={handleAssignReviewer}
+          onDelete={async (taskId) => {
+            if (!window.confirm("Delete this task? This cannot be undone.")) return;
+            try {
+              await axios.delete(`/api/tasks/${taskId}`);
+              toast.success("Task deleted");
+              setSelectedTask(null);
+              fetchTasks();
+            } catch {
+              toast.error("Failed to delete task");
+            }
+          }}
           userRole={role}
         />
       )}

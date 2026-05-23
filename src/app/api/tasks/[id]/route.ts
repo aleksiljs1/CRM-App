@@ -423,3 +423,40 @@ export async function PATCH(
     );
   }
 }
+
+// DELETE - Delete a task (MANAGER+ only)
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!["ADMIN", "PARTNER", "MANAGER"].includes(session.user.role)) {
+      return Response.json({ error: "Only managers can delete tasks" }, { status: 403 });
+    }
+
+    const { id } = await params;
+
+    const task = await prisma.task.findUnique({ where: { id } });
+    if (!task) {
+      return Response.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // Department check
+    const dept = session.user.department;
+    if (dept && task.department !== dept && session.user.role === "MANAGER") {
+      return Response.json({ error: "Cannot delete tasks from other departments" }, { status: 403 });
+    }
+
+    await prisma.task.delete({ where: { id } });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    return Response.json({ error: "Failed to delete task" }, { status: 500 });
+  }
+}

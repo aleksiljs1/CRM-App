@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  TasksByDepartmentChart,
+  TasksByTeamChart,
   ClientPipelineChart,
 } from "@/components/dashboard-charts";
 import {
@@ -197,7 +197,7 @@ export default async function ManagerDashboardPage() {
     completedTasks,
     unreadEmails,
     pendingSubmissions,
-    tasksByDept,
+    openTasksByAssignee,
     clientsByStatus,
     employeesByDept,
     openTasksByDept,
@@ -235,10 +235,15 @@ export default async function ManagerDashboardPage() {
     }),
 
     // Chart data
+    // (1) open tasks per assignee
     prisma.task.groupBy({
-      by: ["department"],
+      by: ["assignedToId"],
       _count: { id: true },
-      where: { department: { not: null }, ...taskDeptFilter },
+      where: {
+        status: { not: "COMPLETED" },
+        assignedToId: { not: null },
+        ...taskDeptFilter,
+      },
     }),
     prisma.client.groupBy({
       by: ["status"],
@@ -325,14 +330,38 @@ export default async function ManagerDashboardPage() {
   const completionRate =
     totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  // Resolve assignee names for the per-person task chart
+  const assigneeIds = openTasksByAssignee
+    .map((row) => row.assignedToId)
+    .filter((id): id is string => id !== null);
+
+  const assigneeUsers = assigneeIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: assigneeIds } },
+        select: { id: true, name: true },
+      })
+    : [];
+
+  const nameById = new Map(assigneeUsers.map((u) => [u.id, u.name]));
+
   // Transform chart data
-  const tasksByDeptChart = tasksByDept.map((item) => ({
-    name: DEPT_LABELS[item.department ?? ""] ?? item.department ?? "N/A",
-    tasks: item._count.id,
-  }));
+  const tasksByTeamChart = openTasksByAssignee
+    .map((row) => ({
+      name: nameById.get(row.assignedToId!) ?? "Unassigned",
+      tasks: row._count.id,
+    }))
+    .sort((a, b) => b.tasks - a.tasks)
+    .slice(0, 12); // cap so the bar chart doesn't get crowded
+
+  const statusLabel: Record<string, string> = {
+    LEAD: "Lead",
+    PROSPECT: "Prospect",
+    ACTIVE: "Active",
+    CHURNED: "Churned",
+  };
 
   const clientPipelineChart = clientsByStatus.map((item) => ({
-    name: item.status,
+    name: statusLabel[item.status] ?? item.status,
     value: item._count.id,
     color:
       item.status === "LEAD"
@@ -482,18 +511,18 @@ export default async function ManagerDashboardPage() {
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Tasks by Department
+                Tasks by Team
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Open task distribution
+                Open tasks per team member
               </p>
             </div>
             <div className="mt-4">
-              {tasksByDeptChart.length > 0 ? (
-                <TasksByDepartmentChart data={tasksByDeptChart} />
+              {tasksByTeamChart.length > 0 ? (
+                <TasksByTeamChart data={tasksByTeamChart} />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">
-                  No task data available
+                  No open tasks assigned
                 </p>
               )}
             </div>
