@@ -84,7 +84,7 @@ interface TasksByStatusChartProps {
 }
 
 // Colors mirror the canonical task-status palette from
-// src/app/dashboard/hr/tasks/page.tsx so cues stay consistent across the app:
+// src/app/dashboard/workspace/tasks/page.tsx so cues stay consistent across the app:
 //   TODO → muted/slate · IN_PROGRESS → blue · REVIEW → amber · APPROVED → teal
 const STATUS_META: Record<
   TasksByStatusData["status"],

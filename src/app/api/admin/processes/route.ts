@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
           documentName: body.documentName,
           description: body.description || null,
           isMandatory: body.isMandatory ?? true,
+          source: body.source || "CLIENT",
         },
       });
       return Response.json(doc, { status: 201 });

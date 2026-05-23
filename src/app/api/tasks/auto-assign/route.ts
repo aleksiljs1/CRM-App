@@ -117,7 +117,7 @@ export async function POST() {
         title: "Review Auto-Assigned",
         message: `'${task.title}' auto-assigned to you for review.`,
         type: "TASK",
-        link: "/dashboard/hr/tasks",
+        link: "/dashboard/workspace/tasks",
       });
 
       // Notify the department manager about the auto-assignment
@@ -136,7 +136,7 @@ export async function POST() {
             title: "Review Auto-Assigned",
             message: `'${task.title}' auto-assigned to ${bestReviewer.name} for review.`,
             type: "SYSTEM",
-            link: "/dashboard/hr/tasks",
+            link: "/dashboard/workspace/tasks",
           });
         }
       }

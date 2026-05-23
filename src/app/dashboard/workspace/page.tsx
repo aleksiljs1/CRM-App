@@ -490,7 +490,7 @@ export default async function HRDashboardPage() {
           <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
             {deptDisplayName}
           </span>
-          <Link href="/dashboard/hr/emails">
+          <Link href="/dashboard/workspace/emails">
             <Button className="gap-2">
               <Mail className="size-4" />
               View All Emails
@@ -602,25 +602,25 @@ export default async function HRDashboardPage() {
         <SectionLabel icon={Zap}>Quick actions</SectionLabel>
         <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <QuickAction
-            href="/dashboard/hr/emails"
+            href="/dashboard/workspace/emails"
             icon={Mail}
             title="View All Emails"
             subtitle="Manage your inbox"
           />
           <QuickAction
-            href="/dashboard/hr/tasks"
+            href="/dashboard/workspace/tasks"
             icon={CheckSquare}
             title="Manage Tasks"
             subtitle="Track and complete work"
           />
           <QuickAction
-            href="/dashboard/hr/documents"
+            href="/dashboard/workspace/documents"
             icon={FileText}
             title="Documents"
             subtitle="Files and submissions"
           />
           <QuickAction
-            href="/dashboard/hr/performance"
+            href="/dashboard/workspace/performance"
             icon={Award}
             title="My Performance"
             subtitle="Score, ranking and growth"
@@ -633,7 +633,7 @@ export default async function HRDashboardPage() {
         <div className="flex items-center justify-between">
           <SectionLabel icon={Clock}>Recent activity</SectionLabel>
           <Link
-            href="/dashboard/hr/emails"
+            href="/dashboard/workspace/emails"
             className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700"
           >
             View all &rarr;
@@ -661,7 +661,7 @@ export default async function HRDashboardPage() {
                 return (
                   <li key={email.id}>
                     <Link
-                      href="/dashboard/hr/emails"
+                      href="/dashboard/workspace/emails"
                       className={`flex items-center gap-4 px-5 py-3 transition-colors hover:bg-muted/40 ${
                         idx > 0 ? "border-t" : ""
                       }`}

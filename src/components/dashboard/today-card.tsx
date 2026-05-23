@@ -16,8 +16,8 @@ const quickStats = [
 ];
 
 const shortcuts = [
-  { icon: Mail, label: "Compose email", href: "/dashboard/hr/emails" },
-  { icon: Plus, label: "New task", href: "/dashboard/hr/tasks" },
+  { icon: Mail, label: "Compose email", href: "/dashboard/workspace/emails" },
+  { icon: Plus, label: "New task", href: "/dashboard/workspace/tasks" },
   { icon: UserPlus, label: "Add client", href: "/dashboard/clients" },
 ];
 

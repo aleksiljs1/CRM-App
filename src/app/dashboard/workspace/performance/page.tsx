@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-// ─── Inline section primitives (matches /dashboard/hr/ pattern) ─────────────
+// ─── Inline section primitives (matches /dashboard/workspace/ pattern) ─────────────
 
 function SectionLabel({
   icon: Icon,

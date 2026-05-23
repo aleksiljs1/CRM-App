@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
       !["ADMIN", "PARTNER", "MANAGER"].includes(role)
     ) {
       return NextResponse.redirect(
-        new URL("/dashboard/hr", request.url)
+        new URL("/dashboard/workspace", request.url)
       );
     }
   }
@@ -78,7 +78,7 @@ function getDefaultDashboard(role: string): string {
     case "MANAGER":
       return "/dashboard/manager";
     default:
-      return "/dashboard/hr";
+      return "/dashboard/workspace";
   }
 }
 

@@ -69,6 +69,19 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+interface TaskProcessType {
+  id: string;
+  name: string;
+  description: string | null;
+  requiredDocuments: {
+    id: string;
+    documentName: string;
+    description: string | null;
+    isMandatory: boolean;
+    source: string;
+  }[];
+}
+
 interface Task {
   id: string;
   title: string;
@@ -80,12 +93,14 @@ interface Task {
   assignedToId: string | null;
   createdById: string;
   clientId: string | null;
+  processTypeId: string | null;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
   assignedTo: TaskUser | null;
   createdBy: TaskUser;
   client: TaskClient | null;
+  processType?: TaskProcessType | null;
   attachments?: { id: string; fileName: string; filePath: string; fileSize: number; mimeType: string; }[];
   statusHistory?: TaskStatusHistoryEntry[];
 }
@@ -651,6 +666,66 @@ function TaskDetailModal({
             )}
           </div>
 
+          {/* Process Requirements */}
+          {task.processType && task.processType.requiredDocuments.length > 0 && (
+            <div className="mb-4 rounded-lg border bg-muted/20 p-4">
+              <h4 className="text-sm font-semibold text-foreground mb-1">
+                Process: {task.processType.name}
+              </h4>
+              {task.processType.description && (
+                <p className="text-xs text-muted-foreground mb-3">{task.processType.description}</p>
+              )}
+              {(() => {
+                const clientDocs = task.processType!.requiredDocuments.filter((d) => d.source === "CLIENT");
+                const internalDocs = task.processType!.requiredDocuments.filter((d) => d.source === "INTERNAL");
+                return (
+                  <div className="space-y-3">
+                    {clientDocs.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-1.5">
+                          Client Documents ({clientDocs.length})
+                        </p>
+                        <div className="space-y-1">
+                          {clientDocs.map((d) => (
+                            <div key={d.id} className="flex items-center gap-2 text-xs">
+                              <span className="size-4 flex items-center justify-center rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[9px] font-bold shrink-0">
+                                ?
+                              </span>
+                              <span className="text-foreground">{d.documentName}</span>
+                              {d.isMandatory && (
+                                <span className="text-red-600 text-[10px] font-medium">Required</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {internalDocs.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300 mb-1.5">
+                          Internal Documents ({internalDocs.length})
+                        </p>
+                        <div className="space-y-1">
+                          {internalDocs.map((d) => (
+                            <div key={d.id} className="flex items-center gap-2 text-xs">
+                              <span className="size-4 flex items-center justify-center rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-[9px] font-bold shrink-0">
+                                ?
+                              </span>
+                              <span className="text-foreground">{d.documentName}</span>
+                              {d.isMandatory && (
+                                <span className="text-red-600 text-[10px] font-medium">Required</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Attachments */}
           {task.attachments && task.attachments.length > 0 && (
             <div className="space-y-2 mb-4">
@@ -855,6 +930,19 @@ function TaskDetailModal({
 
 // ─── New Task Form ──────────────────────────────────────────────────────────
 
+interface ProcessTypeOption {
+  id: string;
+  name: string;
+  description: string | null;
+  requiredDocuments: {
+    id: string;
+    documentName: string;
+    description: string | null;
+    isMandatory: boolean;
+    source: string;
+  }[];
+}
+
 function NewTaskForm({
   onClose,
   onCreated,
@@ -862,11 +950,18 @@ function NewTaskForm({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const { data: session } = useSession();
+  const userDept = session?.user?.department;
+  const userRole = session?.user?.role || "";
+  const showProcessLink = userRole === "ADMIN" || userDept === "LEGAL";
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [deadline, setDeadline] = useState("");
   const [assignToId, setAssignToId] = useState<string>("");
+  const [processTypeId, setProcessTypeId] = useState<string>("");
+  const [processes, setProcesses] = useState<ProcessTypeOption[]>([]);
   const [taskAttachments, setTaskAttachments] = useState<File[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -879,12 +974,22 @@ function NewTaskForm({
         const res = await axios.get("/api/team");
         setTeamMembers(res.data.team || []);
       } catch {
-        // Team fetch may fail for non-manager roles, that's ok
         setTeamMembers([]);
       }
     }
     fetchTeam();
-  }, []);
+    if (showProcessLink) {
+      async function fetchProcesses() {
+        try {
+          const res = await axios.get("/api/processes");
+          setProcesses(res.data.processes || []);
+        } catch {
+          setProcesses([]);
+        }
+      }
+      fetchProcesses();
+    }
+  }, [showProcessLink]);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
@@ -944,6 +1049,9 @@ function NewTaskForm({
       formData.append("priority", priority);
       if (deadline) formData.append("deadline", deadline);
       formData.append("assignedToId", assignToId);
+      if (processTypeId) {
+        formData.append("processTypeId", processTypeId);
+      }
       for (const file of taskAttachments) {
         formData.append("attachments", file);
       }
@@ -1002,6 +1110,73 @@ function NewTaskForm({
                 rows={3}
               />
             </div>
+
+            {/* Link Process (LEGAL dept / ADMIN only) */}
+            {showProcessLink && processes.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
+                  Link Process
+                </label>
+                <select
+                  value={processTypeId}
+                  onChange={(e) => setProcessTypeId(e.target.value)}
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                >
+                  <option value="">No process linked</option>
+                  {processes.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                {/* Preview process requirements when selected */}
+                {processTypeId && (() => {
+                  const selected = processes.find((p) => p.id === processTypeId);
+                  if (!selected) return null;
+                  const clientDocs = selected.requiredDocuments.filter((d) => d.source === "CLIENT");
+                  const internalDocs = selected.requiredDocuments.filter((d) => d.source === "INTERNAL");
+                  return (
+                    <div className="mt-2 rounded-lg border bg-muted/30 p-3 space-y-2">
+                      {selected.description && (
+                        <p className="text-xs text-muted-foreground">{selected.description}</p>
+                      )}
+                      {clientDocs.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300 mb-1">
+                            Client Documents ({clientDocs.length})
+                          </p>
+                          <ul className="space-y-0.5">
+                            {clientDocs.map((d) => (
+                              <li key={d.id} className="flex items-center gap-1.5 text-xs text-foreground">
+                                <span className={`size-1.5 rounded-full shrink-0 ${d.isMandatory ? "bg-red-500" : "bg-muted-foreground"}`} />
+                                {d.documentName}
+                                {d.isMandatory && <span className="text-red-600 text-[10px]">*</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {internalDocs.length > 0 && (
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300 mb-1">
+                            Internal Documents ({internalDocs.length})
+                          </p>
+                          <ul className="space-y-0.5">
+                            {internalDocs.map((d) => (
+                              <li key={d.id} className="flex items-center gap-1.5 text-xs text-foreground">
+                                <span className={`size-1.5 rounded-full shrink-0 ${d.isMandatory ? "bg-red-500" : "bg-muted-foreground"}`} />
+                                {d.documentName}
+                                {d.isMandatory && <span className="text-red-600 text-[10px]">*</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

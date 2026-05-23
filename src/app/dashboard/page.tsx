@@ -21,6 +21,6 @@ export default async function DashboardPage() {
     case "MANAGER":
       redirect("/dashboard/manager");
     default:
-      redirect("/dashboard/hr");
+      redirect("/dashboard/workspace");
   }
 }

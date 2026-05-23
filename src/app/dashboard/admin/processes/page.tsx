@@ -21,6 +21,7 @@ interface RequiredDocument {
   documentName: string;
   description: string | null;
   isMandatory: boolean;
+  source: string;
 }
 
 interface ProcessType {
@@ -66,6 +67,7 @@ export default function ProcessManagementPage() {
   const [docName, setDocName] = useState("");
   const [docDesc, setDocDesc] = useState("");
   const [docMandatory, setDocMandatory] = useState(true);
+  const [docSource, setDocSource] = useState<"CLIENT" | "INTERNAL">("CLIENT");
   const [docSaving, setDocSaving] = useState(false);
 
   // Delete confirmation
@@ -170,6 +172,7 @@ export default function ProcessManagementPage() {
           documentName: docName,
           description: docDesc || null,
           isMandatory: docMandatory,
+          source: docSource,
         }),
       });
       if (!res.ok) throw new Error("Failed to add document");
@@ -177,6 +180,7 @@ export default function ProcessManagementPage() {
       setDocName("");
       setDocDesc("");
       setDocMandatory(true);
+      setDocSource("CLIENT");
       await fetchProcesses();
     } catch {
       console.error("Add document failed");
@@ -360,6 +364,7 @@ export default function ProcessManagementPage() {
                             setDocName("");
                             setDocDesc("");
                             setDocMandatory(true);
+                            setDocSource("CLIENT");
                           }}
                           className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
                         >
@@ -391,6 +396,15 @@ export default function ProcessManagementPage() {
                                 </p>
                               )}
                             </div>
+                            <span
+                              className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold md:inline-flex ${
+                                doc.source === "INTERNAL"
+                                  ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                                  : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                              }`}
+                            >
+                              {doc.source === "INTERNAL" ? "Internal" : "Client"}
+                            </span>
                             <span
                               className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold md:inline-flex ${
                                 doc.isMandatory
@@ -446,7 +460,15 @@ export default function ProcessManagementPage() {
                               onChange={(e) => setDocDesc(e.target.value)}
                               className="w-full rounded-md border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
                             />
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <select
+                                value={docSource}
+                                onChange={(e) => setDocSource(e.target.value as "CLIENT" | "INTERNAL")}
+                                className="rounded-md border bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              >
+                                <option value="CLIENT">Client</option>
+                                <option value="INTERNAL">Internal</option>
+                              </select>
                               <label className="flex items-center gap-2 text-sm text-foreground">
                                 <input
                                   type="checkbox"
@@ -456,6 +478,8 @@ export default function ProcessManagementPage() {
                                 />
                                 Mandatory
                               </label>
+                            </div>
+                            <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => setAddingDocFor(null)}

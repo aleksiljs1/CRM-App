@@ -312,7 +312,7 @@ export async function PATCH(
             title: "Task Ready for Review",
             message: `'${task.title}' submitted for review by ${userName}. Assign a reviewer.`,
             type: "TASK",
-            link: "/dashboard/hr/tasks",
+            link: "/dashboard/workspace/tasks",
           });
         }
       }
@@ -333,7 +333,7 @@ export async function PATCH(
             title: "Task Approved",
             message: `'${task.title}' approved by ${userName}. Ready for completion.`,
             type: "TASK",
-            link: "/dashboard/hr/tasks",
+            link: "/dashboard/workspace/tasks",
           });
         }
       }
@@ -349,7 +349,7 @@ export async function PATCH(
           title: "New Task Assignment",
           message: `You've been assigned to '${task.title}'.`,
           type: "TASK",
-          link: "/dashboard/hr/tasks",
+          link: "/dashboard/workspace/tasks",
         });
       }
 
@@ -364,7 +364,7 @@ export async function PATCH(
           title: "Revision Required",
           message: `'${task.title}' needs revision. Please review the feedback.`,
           type: "TASK",
-          link: "/dashboard/hr/tasks",
+          link: "/dashboard/workspace/tasks",
         });
       }
 
@@ -375,7 +375,7 @@ export async function PATCH(
           title: "Task Completed",
           message: `'${task.title}' has been completed.`,
           type: "TASK",
-          link: "/dashboard/hr/tasks",
+          link: "/dashboard/workspace/tasks",
         });
       }
     } catch (notifError) {

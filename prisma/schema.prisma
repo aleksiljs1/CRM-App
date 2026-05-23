@@ -171,6 +171,7 @@ model ProcessType {
   createdBy         User               @relation("ProcessCreator", fields: [createdById], references: [id])
   requiredDocuments RequiredDocument[]
   submissions       ClientSubmission[]
+  tasks             Task[]
 
   @@index([department])
 }
@@ -181,6 +182,7 @@ model RequiredDocument {
   documentName  String
   description   String?
   isMandatory   Boolean @default(true)
+  source        String  @default("CLIENT") // "CLIENT" or "INTERNAL"
 
   // Relations
   processType       ProcessType         @relation(fields: [processTypeId], references: [id], onDelete: Cascade)
@@ -237,6 +239,7 @@ model Task {
   assignedToId String?
   createdById  String
   clientId     String?
+  processTypeId String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   completedAt  DateTime?
@@ -245,6 +248,7 @@ model Task {
   assignedTo     User?              @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   createdBy      User               @relation("TaskCreator", fields: [createdById], references: [id])
   client         Client?            @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  processType    ProcessType?       @relation(fields: [processTypeId], references: [id], onDelete: SetNull)
   attachments    TaskAttachment[]
   statusHistory  TaskStatusHistory[]
   comments       TaskComment[]
@@ -252,6 +256,7 @@ model Task {
   @@index([assignedToId])
   @@index([createdById])
   @@index([clientId])
+  @@index([processTypeId])
   @@index([status])
   @@index([department])
   @@index([priority])

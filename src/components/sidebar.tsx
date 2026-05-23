@@ -25,6 +25,7 @@ import {
   Building2,
   ClipboardList,
   Gauge,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -46,37 +47,37 @@ const navItems: NavItem[] = [
   },
   {
     label: "Emails",
-    href: "/dashboard/hr/emails",
+    href: "/dashboard/workspace/emails",
     icon: Mail,
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Tasks",
-    href: "/dashboard/hr/tasks",
+    href: "/dashboard/workspace/tasks",
     icon: CheckSquare,
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Calendar",
-    href: "/dashboard/hr/calendar",
+    href: "/dashboard/workspace/calendar",
     icon: CalendarDays,
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Documents",
-    href: "/dashboard/hr/documents",
+    href: "/dashboard/workspace/documents",
     icon: FileText,
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Chats",
-    href: "/dashboard/hr/chats",
+    href: "/dashboard/workspace/chats",
     icon: MessageSquare,
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "My Performance",
-    href: "/dashboard/hr/performance",
+    href: "/dashboard/workspace/performance",
     icon: Award,
     roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN", "MANAGER"],
   },
@@ -117,20 +118,26 @@ const navItems: NavItem[] = [
     roles: ["PARTNER", "MANAGER"],
   },
   {
+    label: "Processes",
+    href: "/dashboard/hr/processes",
+    icon: FolderOpen,
+    roles: ["MANAGER"],
+  },
+  {
     label: "Emails",
-    href: "/dashboard/hr/emails",
+    href: "/dashboard/workspace/emails",
     icon: Mail,
     roles: ["ADMIN"],
   },
   {
     label: "Documents",
-    href: "/dashboard/hr/documents",
+    href: "/dashboard/workspace/documents",
     icon: FileText,
     roles: ["ADMIN"],
   },
   {
     label: "Chats",
-    href: "/dashboard/hr/chats",
+    href: "/dashboard/workspace/chats",
     icon: MessageSquare,
     roles: ["ADMIN"],
   },

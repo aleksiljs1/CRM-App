@@ -44,7 +44,7 @@ export default function LoginPage() {
           CLIENT: "/dashboard/client",
           MANAGER: "/dashboard/manager",
         };
-        const destination = (role && roleRoutes[role]) || "/dashboard/hr";
+        const destination = (role && roleRoutes[role]) || "/dashboard/workspace";
         router.push(destination);
         router.refresh();
       }

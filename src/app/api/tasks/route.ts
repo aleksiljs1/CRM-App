@@ -75,6 +75,11 @@ export async function GET(request: NextRequest) {
         client: {
           select: { id: true, companyName: true },
         },
+        processType: {
+          include: {
+            requiredDocuments: true,
+          },
+        },
         attachments: true,
         statusHistory: {
           include: { changedBy: { select: { id: true, name: true } } },
@@ -163,6 +168,7 @@ export async function POST(request: NextRequest) {
     const department = formData.get("department") as string | null;
     const assignedToIdRaw = formData.get("assignedToId") as string | null;
     const clientId = formData.get("clientId") as string | null;
+    const processTypeId = formData.get("processTypeId") as string | null;
 
     if (!title || !title.trim()) {
       return Response.json({ error: "Title is required" }, { status: 400 });
@@ -223,6 +229,7 @@ export async function POST(request: NextRequest) {
         deadline: deadline ? new Date(deadline) : null,
         department: (department || session.user.department || null) as Department | null,
         clientId: clientId || null,
+        processTypeId: processTypeId || null,
         assignedToId: assignedToId,
         createdById: session.user.id,
         attachments: {
@@ -250,6 +257,9 @@ export async function POST(request: NextRequest) {
         },
         client: {
           select: { id: true, companyName: true },
+        },
+        processType: {
+          include: { requiredDocuments: true },
         },
         attachments: true,
         statusHistory: {

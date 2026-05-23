@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// ─── Inline section primitives (matches /dashboard/hr/ pattern) ─────────────
+// ─── Inline section primitives (matches /dashboard/workspace/ pattern) ─────────────
 
 function SectionLabel({
   icon: Icon,

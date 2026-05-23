@@ -70,7 +70,7 @@ export async function POST() {
             title: "New Email",
             message: `From ${emailData.senderName}: ${emailData.subject}`,
             type: "EMAIL" as const,
-            link: "/dashboard/hr/emails",
+            link: "/dashboard/workspace/emails",
           })),
         });
       }

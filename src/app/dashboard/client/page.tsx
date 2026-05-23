@@ -7,12 +7,19 @@ import Link from "next/link";
 import {
   Sparkles,
   Upload,
+  Inbox,
+  FolderOpen,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import {
   LiveTaskProgress,
   type LiveTask,
 } from "@/components/client/live-task-progress";
+import { ActionItemsPanel } from "@/components/client/action-items-panel";
+import { ClientProcessesSection } from "@/components/client/client-processes";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -98,6 +105,50 @@ export default async function ClientDashboardPage() {
   const submissions = client?.submissions ?? [];
   const allTasks = client?.tasks ?? [];
 
+  // Fetch processes linked to client tasks (for the Processes section)
+  const processesFromTasks = allTasks
+    .filter((t: any) => t.processTypeId)
+    .map((t: any) => t.processTypeId as string);
+  const uniqueProcessIds = [...new Set([
+    ...submissions.map((s) => s.processTypeId),
+    ...processesFromTasks,
+  ])];
+
+  const clientProcesses = uniqueProcessIds.length > 0
+    ? await prisma.processType.findMany({
+        where: { id: { in: uniqueProcessIds } },
+        include: {
+          requiredDocuments: {
+            where: { source: "CLIENT" },
+          },
+        },
+      })
+    : [];
+
+  // Build process status data for the UI
+  const processStatusData = clientProcesses.map((proc) => {
+    const sub = submissions.find((s) => s.processTypeId === proc.id);
+    const uploadedDocs = sub?.documents ?? [];
+    const matchedIds = new Set(
+      uploadedDocs
+        .map((d) => d.aiMatchedToId)
+        .filter((v): v is string => Boolean(v))
+    );
+    const requiredDocs = proc.requiredDocuments;
+    const uploadedCount = matchedIds.size;
+    const missingDocs = requiredDocs.filter((r) => !matchedIds.has(r.id));
+    return {
+      id: proc.id,
+      name: proc.name,
+      description: proc.description,
+      totalRequired: requiredDocs.length,
+      uploadedCount,
+      missingDocs: missingDocs.map((d) => d.documentName),
+      submissionId: sub?.id ?? null,
+      status: sub?.status ?? null,
+    };
+  });
+
   // Derived metrics — all from real data, no demo numbers
   const activeSubmissions = submissions.filter(
     (s) => s.status === "INCOMPLETE" || s.status === "UNDER_REVIEW"
@@ -150,7 +201,25 @@ const displayName =
       {/* Overall progress headline + Your active work — both live-updating */}
       <LiveTaskProgress initialTasks={liveTasks} />
 
-{/* Overview — 4 real metrics */}
+      {/* What we need from you — unmatched required docs across INCOMPLETE
+          submissions. Slotted high so it's the first thing a returning client
+          sees after their progress ring. */}
+      <section>
+        <SectionLabel icon={AlertCircle}>What we need from you</SectionLabel>
+        <ActionItemsPanel items={actionItems} />
+      </section>
+
+      {/* Processes — document requirements and upload status */}
+      {processStatusData.length > 0 && (
+        <section>
+          <SectionLabel icon={FileText}>Processes</SectionLabel>
+          <div className="mt-3">
+            <ClientProcessesSection processes={processStatusData} />
+          </div>
+        </section>
+      )}
+
+      {/* Overview — 4 real metrics */}
       <section>
         <SectionLabel icon={Sparkles}>Overview</SectionLabel>
         <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
