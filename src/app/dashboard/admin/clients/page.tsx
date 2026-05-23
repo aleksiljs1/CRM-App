@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Building2,
   FolderOpen,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -410,6 +412,20 @@ export default function AdminClientsPage() {
             {statusCounts.INACTIVE} inactive
           </p>
         </div>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={async () => {
+            try {
+              await exportToExcel("clients");
+            } catch {
+              // silent
+            }
+          }}
+        >
+          <Download className="h-4 w-4" />
+          Export Clients
+        </Button>
       </div>
 
       {/* Filters */}

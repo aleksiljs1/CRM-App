@@ -22,7 +22,9 @@ import {
   ChevronUp,
   Clock,
   TrendingUp,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 const PerformancePage = lazy(() => import("@/app/dashboard/manager/performance/page"));
 
@@ -527,13 +529,32 @@ export default function TeamPage() {
             </button>
           </div>
           {activeTab === "team" && isManagerPlus && (
-            <Button
-              className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
-              onClick={() => setShowAddEmployee(true)}
-            >
-              <UserPlus className="w-4 h-4 mr-1" />
-              Add Employee
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                className="w-full md:w-auto gap-2"
+                onClick={async () => {
+                  try {
+                    await exportToExcel("team");
+                    setToast("Excel exported successfully");
+                    setTimeout(() => setToast(""), 3000);
+                  } catch {
+                    setToast("Export failed");
+                    setTimeout(() => setToast(""), 3000);
+                  }
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Export Team
+              </Button>
+              <Button
+                className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
+                onClick={() => setShowAddEmployee(true)}
+              >
+                <UserPlus className="w-4 h-4 mr-1" />
+                Add Employee
+              </Button>
+            </>
           )}
         </div>
       </div>

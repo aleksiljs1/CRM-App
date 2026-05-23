@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { exportToExcel } from "@/lib/export";
 import {
   BarChart3,
   Activity,
@@ -10,6 +12,7 @@ import {
   Download,
   PieChart,
   LineChart,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,9 +70,17 @@ export default function ReportsPage() {
             size="sm"
             variant="outline"
             className="gap-2"
+            onClick={async () => {
+              try {
+                await exportToExcel("dashboard-kpis");
+                toast.success("Excel exported successfully");
+              } catch {
+                toast.error("Export failed");
+              }
+            }}
           >
             <Download className="size-4" />
-            Export CSV
+            Export Excel
           </Button>
         </div>
       </div>
@@ -203,14 +214,17 @@ export default function ReportsPage() {
             {
               title: "Team activity",
               subtitle: "Tasks, emails and chats per person",
+              exportType: "team",
             },
             {
               title: "Client portfolio",
               subtitle: "Status breakdown and engagement",
+              exportType: "clients",
             },
             {
-              title: "SLA performance",
-              subtitle: "Response and resolution times",
+              title: "Task report",
+              subtitle: "Full task list with status and priority",
+              exportType: "tasks",
             },
           ].map((r) => (
             <div
@@ -232,6 +246,14 @@ export default function ReportsPage() {
                 size="sm"
                 variant="outline"
                 className="shrink-0 gap-1.5"
+                onClick={async () => {
+                  try {
+                    await exportToExcel(r.exportType);
+                    toast.success("Excel exported successfully");
+                  } catch {
+                    toast.error("Export failed");
+                  }
+                }}
               >
                 <Download className="size-3.5" />
                 Export

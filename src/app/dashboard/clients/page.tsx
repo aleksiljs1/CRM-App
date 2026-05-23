@@ -14,7 +14,9 @@ import {
   Copy,
   X,
   Loader2,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -100,6 +102,22 @@ export default function ClientsPage() {
           </span>
           {canManageClients && (
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    await exportToExcel("clients");
+                    toast.success("Excel exported successfully");
+                  } catch {
+                    toast.error("Export failed");
+                  }
+                }}
+              >
+                <Download className="size-4" />
+                Export Clients
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

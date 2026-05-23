@@ -23,7 +23,9 @@ import {
   ArrowLeft,
   Plus,
   X,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -406,6 +408,23 @@ export default function HREmailsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
+          {["ADMIN", "PARTNER", "MANAGER"].includes(session?.user?.role || "") && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await exportToExcel("emails");
+                  toast.success("Excel exported successfully");
+                } catch {
+                  toast.error("Export failed");
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Export Emails
+            </Button>
+          )}
           <Button
             onClick={() => setShowCompose(true)}
             className="gap-2 bg-brand-600 text-white hover:bg-brand-700 flex-1 md:flex-none"

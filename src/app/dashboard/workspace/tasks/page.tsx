@@ -28,7 +28,9 @@ import {
   Calendar,
   Sparkles,
   Trash2,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -1582,6 +1584,24 @@ export default function HRTasksPage() {
           <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
             {deptDisplayName}
           </span>
+          {isManagerPlus && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await exportToExcel("tasks");
+                  toast.success("Excel exported successfully");
+                } catch {
+                  toast.error("Export failed");
+                }
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Export Tasks
+            </Button>
+          )}
           {canCreateTasks && (
             <Button
               size="sm"

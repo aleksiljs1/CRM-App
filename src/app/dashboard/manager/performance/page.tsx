@@ -20,7 +20,10 @@ import {
   History,
   Eye,
   ArrowLeft,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
+import { toast } from "sonner";
 
 interface PerformanceData {
   user: {
@@ -479,16 +482,32 @@ export default function PerformancePage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setViewingHistoryReport(null);
-              setExpandedEmployee(null);
-            }}
-            className="flex items-center justify-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/40 px-4 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors w-full md:w-auto"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Current
-          </button>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={async () => {
+                try {
+                  await exportToExcel("performance-report", { reportId: viewingHistoryReport.id });
+                  toast.success("Excel exported successfully");
+                } catch {
+                  toast.error("Export failed");
+                }
+              }}
+              className="flex items-center justify-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/40 px-4 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors w-full md:w-auto"
+            >
+              <Download className="h-4 w-4" />
+              Export Report
+            </button>
+            <button
+              onClick={() => {
+                setViewingHistoryReport(null);
+                setExpandedEmployee(null);
+              }}
+              className="flex items-center justify-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/40 px-4 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors w-full md:w-auto"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Current
+            </button>
+          </div>
         </div>
 
         {/* Render full report */}
@@ -700,14 +719,30 @@ export default function PerformancePage() {
 
       {/* Performance Scores Table */}
       <section>
-        <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-          <h2 className="text-lg font-semibold text-foreground">
-            Employee Performance Scores
-          </h2>
-          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-            {performanceData.length} employees
-          </span>
+        <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Employee Performance Scores
+            </h2>
+            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {performanceData.length} employees
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await exportToExcel("performance");
+                toast.success("Excel exported successfully");
+              } catch {
+                toast.error("Export failed");
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Export Scores
+          </button>
         </div>
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm -mx-3 sm:mx-0">
           <div className="overflow-x-auto">

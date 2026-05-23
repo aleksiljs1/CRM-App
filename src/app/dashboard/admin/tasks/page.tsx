@@ -29,7 +29,9 @@ import {
   Sparkles,
   Trash2,
   Filter,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 // ---- Types ----------------------------------------------------------------
 
@@ -1322,13 +1324,30 @@ export default function AdminTasksPage() {
             View and manage tasks across all departments
           </p>
         </div>
-        <Button
-          className="w-full bg-brand-600 hover:bg-brand-700 text-white md:w-auto"
-          onClick={() => setShowNewForm(true)}
-        >
-          <Plus className="w-4 h-4 mr-1" />
-          New Task
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={async () => {
+              try {
+                await exportToExcel("tasks");
+                toast.success("Excel exported successfully");
+              } catch {
+                toast.error("Export failed");
+              }
+            }}
+          >
+            <Download className="w-4 h-4" />
+            Export Tasks
+          </Button>
+          <Button
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white md:w-auto"
+            onClick={() => setShowNewForm(true)}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Department Filter */}

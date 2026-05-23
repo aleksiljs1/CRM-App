@@ -10,7 +10,9 @@ import {
   Clock,
   CheckCircle,
   Users,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 interface DepartmentStat {
   department: string;
@@ -137,14 +139,29 @@ export default function AdminPerformancePage() {
   return (
     <div className="space-y-8 pb-10">
       {/* Header */}
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-300">
-          Firm-Wide Performance Dashboard
-        </h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Department comparison, top performers, workload health, and overdue
-          alerts
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-300">
+            Firm-Wide Performance Dashboard
+          </h1>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Department comparison, top performers, workload health, and overdue
+            alerts
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              await exportToExcel("performance");
+            } catch {
+              // silent
+            }
+          }}
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <Download className="h-4 w-4" />
+          Export Performance
+        </button>
       </div>
 
       {/* ── Section 1: Department Comparison ── */}

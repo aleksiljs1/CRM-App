@@ -28,6 +28,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { ExportButton } from "@/components/export-button";
 
 // -- Helpers ------------------------------------------------------------------
 
@@ -421,12 +422,15 @@ export default async function ManagerDashboardPage() {
           <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
             {deptDisplayName}
           </span>
-          <Link href="/dashboard/manager/team" className="w-full md:w-auto">
-            <Button className="w-full gap-2 md:w-auto bg-brand-600 hover:bg-brand-700 text-white">
-              <Users className="size-4" />
-              View Team
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <ExportButton type="dashboard-kpis" label="Export KPIs" />
+            <Link href="/dashboard/manager/team" className="w-full md:w-auto">
+              <Button className="w-full gap-2 md:w-auto bg-brand-600 hover:bg-brand-700 text-white">
+                <Users className="size-4" />
+                View Team
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

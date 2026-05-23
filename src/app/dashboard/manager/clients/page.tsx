@@ -22,7 +22,9 @@ import {
   Loader2,
   CheckCircle2,
   Copy,
+  Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
 
 function getDeptName(dept: string | null): string {
   const map: Record<string, string> = {
@@ -594,13 +596,30 @@ export default function ClientPipelinePage() {
           <span className="inline-flex items-center rounded-full border border-brand-200/60 bg-brand-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-700 dark:border-brand-800/50 dark:bg-brand-900/40 dark:text-brand-300">
             {deptDisplayName}
           </span>
-          <Button
-            onClick={() => setShowInvite(true)}
-            className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            New client
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  await exportToExcel("clients");
+                  toast.success("Excel exported successfully");
+                } catch {
+                  toast.error("Export failed");
+                }
+              }}
+            >
+              <Download className="w-4 h-4" />
+              Export Clients
+            </Button>
+            <Button
+              onClick={() => setShowInvite(true)}
+              className="w-full md:w-auto bg-brand-600 hover:bg-brand-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              New client
+            </Button>
+          </div>
         </div>
       </div>
 
