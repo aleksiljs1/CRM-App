@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
+import { getSocket } from "@/lib/socket-client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1180,6 +1181,25 @@ export default function AdminTasksPage() {
       fetchTasks();
     }
   }, [fetchTasks, role]);
+
+  // Real-time: ADMIN joins the firm:tasks room and refetches on any task
+  // change anywhere in the firm. No dept filter — admin sees everything.
+  useEffect(() => {
+    if (role !== "ADMIN") return;
+    const socket = getSocket();
+    socket.emit("subscribe-tasks", { role });
+    const onChange = () => {
+      fetchTasks();
+    };
+    socket.on("task-updated", onChange);
+    socket.on("task-created", onChange);
+    socket.on("task-deleted", onChange);
+    return () => {
+      socket.off("task-updated", onChange);
+      socket.off("task-created", onChange);
+      socket.off("task-deleted", onChange);
+    };
+  }, [role, fetchTasks]);
 
   async function handleStatusChange(taskId: string, newStatus: string) {
     try {

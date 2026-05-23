@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
+import { getSocket } from "@/lib/socket-client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1375,6 +1376,25 @@ export default function HRTasksPage() {
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  // ── Real-time: subscribe to dept (+ firm if admin/partner) rooms so any
+  // task change made by another user shows up here without a page refresh.
+  useEffect(() => {
+    if (!role) return;
+    const socket = getSocket();
+    socket.emit("subscribe-tasks", { department: dept, role });
+    const onChange = () => {
+      fetchTasks();
+    };
+    socket.on("task-updated", onChange);
+    socket.on("task-created", onChange);
+    socket.on("task-deleted", onChange);
+    return () => {
+      socket.off("task-updated", onChange);
+      socket.off("task-created", onChange);
+      socket.off("task-deleted", onChange);
+    };
+  }, [dept, role, fetchTasks]);
 
   // Auto-assign check every 60 seconds (for managers)
   useEffect(() => {

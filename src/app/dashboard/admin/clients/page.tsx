@@ -410,16 +410,6 @@ export default function AdminClientsPage() {
             {statusCounts.INACTIVE} inactive
           </p>
         </div>
-        <Button
-          className="w-full gap-2 bg-brand-600 text-white hover:bg-brand-700 md:w-auto"
-          onClick={() => {
-            setEditingClient(null);
-            setModalOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Add Client
-        </Button>
       </div>
 
       {/* Filters */}

@@ -34,8 +34,12 @@ export async function middleware(request: NextRequest) {
       );
     }
 
+    // Gate the CLIENT portal only — NOT `/dashboard/clients` (the firm's
+    // client list). `startsWith("/dashboard/client")` would also catch
+    // "clients", so we match the exact path or the `/client/` subtree.
     if (
-      pathname.startsWith("/dashboard/client") &&
+      (pathname === "/dashboard/client" ||
+        pathname.startsWith("/dashboard/client/")) &&
       role !== "CLIENT" &&
       role !== "ADMIN"
     ) {

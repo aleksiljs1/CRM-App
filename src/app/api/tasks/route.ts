@@ -269,6 +269,20 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // ── Real-time: tell open task pages a new task exists ──
+    // Sockets must never break the API response — swallow any errors.
+    try {
+      const io = (globalThis as any).io;
+      if (io) {
+        if (task.department) {
+          io.to(`dept:${task.department}`).emit("task-created", { id: task.id });
+        }
+        io.to("firm:tasks").emit("task-created", { id: task.id });
+      }
+    } catch (socketError) {
+      console.error("Error emitting task-created event:", socketError);
+    }
+
     return Response.json({ task }, { status: 201 });
   } catch (error) {
     console.error("Error creating task:", error);

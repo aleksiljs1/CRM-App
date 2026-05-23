@@ -33,6 +33,22 @@ app.prepare().then(() => {
       console.log(`[Socket.io] User ${userId} joined room user:${userId}`);
     });
 
+    // Subscribe to task-list broadcasts. Each task page (HR + admin) calls this
+    // on mount so the user receives task-updated / task-created / task-deleted
+    // events for tasks in their scope. dept = their own department; firm:tasks
+    // is the cross-dept room for ADMIN + PARTNER.
+    socket.on(
+      "subscribe-tasks",
+      (data: { department?: string | null; role?: string }) => {
+        if (data?.department) {
+          socket.join(`dept:${data.department}`);
+        }
+        if (data?.role === "ADMIN" || data?.role === "PARTNER") {
+          socket.join("firm:tasks");
+        }
+      }
+    );
+
     socket.on("join-conversation", (conversationId: string) => {
       socket.join(`conv:${conversationId}`);
       console.log(`[Socket.io] Joined conversation room conv:${conversationId}`);
