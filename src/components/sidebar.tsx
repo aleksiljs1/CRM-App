@@ -79,7 +79,7 @@ const navItems: NavItem[] = [
     label: "My Performance",
     href: "/dashboard/workspace/performance",
     icon: Award,
-    roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN", "MANAGER"],
+    roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Clients",
@@ -100,13 +100,7 @@ const navItems: NavItem[] = [
     roles: ["PARTNER", "MANAGER"],
   },
   {
-    label: "Performance",
-    href: "/dashboard/manager/performance",
-    icon: TrendingUp,
-    roles: ["PARTNER", "MANAGER"],
-  },
-  {
-    label: "My Team",
+    label: "Team & Performance",
     href: "/dashboard/manager/team",
     icon: Users,
     roles: ["PARTNER", "MANAGER"],

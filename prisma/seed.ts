@@ -320,6 +320,85 @@ async function main() {
     });
     console.log("  Created client: Alpha Corp");
 
+    // More clients with diverse industries
+    const moreClients = [
+      {
+        id: "seed-client-beta",
+        companyName: "Beta Consulting Group Sh.p.k.",
+        contactName: "Anisa Rama",
+        contactEmail: "anisa@betaconsulting.al",
+        phone: "+355 69 111 2233",
+        industry: "Consulting",
+        status: "ACTIVE" as const,
+      },
+      {
+        id: "seed-client-gamma",
+        companyName: "Gamma Import-Export Sh.a.",
+        contactName: "Fatmir Hoxha",
+        contactEmail: "fatmir@gammaimport.al",
+        phone: "+355 68 222 3344",
+        industry: "Import/Export",
+        status: "ACTIVE" as const,
+      },
+      {
+        id: "seed-client-theta",
+        companyName: "Theta Tech Solutions",
+        contactName: "Lindita Krasniqi",
+        contactEmail: "lindita@thetatech.al",
+        phone: "+355 69 333 4455",
+        industry: "Technology",
+        status: "LEAD" as const,
+      },
+      {
+        id: "seed-client-iota",
+        companyName: "Iota Hospitality Group",
+        contactName: "Marsel Basha",
+        contactEmail: "marsel@iotahotels.al",
+        phone: "+355 67 444 5566",
+        industry: "Hospitality",
+        status: "ACTIVE" as const,
+      },
+      {
+        id: "seed-client-kappa",
+        companyName: "Kappa Agriculture Sh.p.k.",
+        contactName: "Vera Dushku",
+        contactEmail: "vera@kappaagri.al",
+        phone: "+355 69 555 6677",
+        industry: "Agriculture",
+        status: "LEAD" as const,
+      },
+    ];
+
+    for (const c of moreClients) {
+      await prisma.client.upsert({
+        where: { id: c.id },
+        update: {},
+        create: {
+          id: c.id,
+          companyName: c.companyName,
+          contactName: c.contactName,
+          contactEmail: c.contactEmail,
+          phone: c.phone,
+          industry: c.industry,
+          status: c.status,
+          assignedToId: hrManager.id,
+        },
+      });
+      // Create login account for each client
+      await prisma.user.upsert({
+        where: { email: c.contactEmail },
+        update: {},
+        create: {
+          email: c.contactEmail,
+          name: c.contactName,
+          password: await bcrypt.hash("client123", 10),
+          role: "CLIENT",
+          department: null,
+        },
+      });
+    }
+    console.log("  Created 5 additional clients with login accounts");
+
     // Seed a sample process type with required documents
     const processType = await prisma.processType.upsert({
       where: { id: "seed-process-audit" },
@@ -936,6 +1015,120 @@ async function main() {
     });
 
     console.log("  Created 4 legal emails across 3 threads");
+
+    // ── Legal Document Templates ──
+    const companyRegProcess = await prisma.processType.findFirst({
+      where: { name: { contains: "Company Registration" }, department: "LEGAL" },
+    });
+
+    await prisma.documentTemplate.upsert({
+      where: { id: "seed-template-poa" },
+      update: {},
+      create: {
+        id: "seed-template-poa",
+        name: "Power of Attorney for QKB Registration",
+        description: "Standard POA template authorizing Kreston Albania to register a company with QKB",
+        department: "LEGAL",
+        processTypeId: companyRegProcess?.id || null,
+        createdById: legalManager.id,
+        placeholders: ["founderName", "idNumber", "companyName", "companyType", "registeredAddress", "date", "city"],
+        content: `PROKURË E POSAÇME
+SPECIAL POWER OF ATTORNEY
+
+Unë, {{founderName}}, mbajtës/e i/e dokumentit të identifikimit Nr. {{idNumber}}, me adresë në {{city}}, Shqipëri,
+
+I, {{founderName}}, holder of ID/Passport No. {{idNumber}}, residing in {{city}}, Albania,
+
+AUTORIZOJ / HEREBY AUTHORIZE
+
+Kreston Albania Sh.p.k., me NIPT L42205045A, përfaqësuar nga administratori, të veprojë në emrin tim për:
+
+Kreston Albania Sh.p.k., with NIPT L42205045A, represented by its administrator, to act on my behalf for:
+
+1. Regjistrimin e shoqërisë {{companyName}} ({{companyType}}) pranë Qendrës Kombëtare të Biznesit (QKB)
+   Registration of {{companyName}} ({{companyType}}) with the National Business Center (QKB)
+
+2. Depozitimin e aktit të themelimit dhe statutit
+   Filing of the founding act and articles of association
+
+3. Marrjen e NIPT-it (Numrit të Identifikimit të Personit të Tatueshëm)
+   Obtaining the NIPT (Tax Identification Number)
+
+4. Kryerjen e çdo veprimi tjetër të nevojshëm për regjistrimin e plotë të shoqërisë
+   Performing any other action necessary for the complete registration of the company
+
+Adresa e selisë: {{registeredAddress}}
+Registered office address: {{registeredAddress}}
+
+Kjo prokurë është e vlefshme për 90 ditë nga data e nënshkrimit.
+This power of attorney is valid for 90 days from the date of signing.
+
+Datë / Date: {{date}}
+Vendi / Place: {{city}}, Shqipëri / Albania
+
+Nënshkrimi / Signature: ____________________
+{{founderName}}
+
+(Noterizuar nga / Notarized by: ___________________)
+(Nr. i Noterizimit / Notarization No.: _____________)`,
+      },
+    });
+
+    await prisma.documentTemplate.upsert({
+      where: { id: "seed-template-founding" },
+      update: {},
+      create: {
+        id: "seed-template-founding",
+        name: "Founding Decision (Vendimi i Themelimit)",
+        description: "Template for the formal founding decision of an SHPK company",
+        department: "LEGAL",
+        processTypeId: companyRegProcess?.id || null,
+        createdById: legalManager.id,
+        placeholders: ["companyName", "founderName", "founderIdNumber", "sharePercentage", "capitalAmount", "capitalCurrency", "registeredAddress", "administratorName", "date", "city"],
+        content: `VENDIM PËR THEMELIMIN E SHOQËRISË
+FOUNDING DECISION
+
+Sot, më datë {{date}}, në {{city}}, Shqipëri,
+Today, on {{date}}, in {{city}}, Albania,
+
+Themeluesit / The Founders:
+
+1. {{founderName}}, me dokument identifikimi Nr. {{founderIdNumber}}
+   {{founderName}}, with ID/Passport No. {{founderIdNumber}}
+
+VENDOSËN / DECIDED:
+
+1. THEMELIMIN e shoqërisë me përgjegjësi të kufizuar me emërtimin:
+   TO ESTABLISH a limited liability company under the name:
+   "{{companyName}}" Sh.p.k.
+
+2. KAPITALI themeltar i shoqërisë do të jetë {{capitalAmount}} {{capitalCurrency}}
+   The founding CAPITAL shall be {{capitalAmount}} {{capitalCurrency}}
+
+3. NDARJA e kuotave / SHARE DISTRIBUTION:
+   - {{founderName}}: {{sharePercentage}}% e kapitalit / of capital
+
+4. SELIA e shoqërisë / REGISTERED OFFICE:
+   {{registeredAddress}}
+
+5. ADMINISTRATORI / ADMINISTRATOR:
+   {{administratorName}} emërohet si administrator i shoqërisë
+   {{administratorName}} is appointed as administrator of the company
+
+6. STATUTI / ARTICLES OF ASSOCIATION:
+   Miratohet statuti i shoqërisë i bashkëlidhur me këtë vendim
+   The articles of association attached to this decision are hereby approved
+
+Nënshkrimet / Signatures:
+
+{{founderName}}: ____________________
+
+Datë / Date: {{date}}
+Vendi / Place: {{city}}, Shqipëri / Albania`,
+      },
+    });
+
+    console.log("  Created 2 legal document templates");
   }
 
   console.log("\nSeeding complete!");
