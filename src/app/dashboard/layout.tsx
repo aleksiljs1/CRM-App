@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/sidebar";
 import { ChatPopup } from "@/components/chat-popup";
+import { NotificationBell } from "@/components/notification-bell";
 
 export default function DashboardLayout({
   children,
@@ -9,9 +10,15 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <AppSidebar />
-      <main className="flex-1 overflow-y-auto bg-muted/50 dark:bg-background p-6">
-        {children}
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Top bar with notification bell */}
+        <header className="flex h-12 shrink-0 items-center justify-end border-b border-border bg-card px-6">
+          <NotificationBell />
+        </header>
+        <main className="flex-1 overflow-y-auto bg-muted/50 dark:bg-background p-6">
+          {children}
+        </main>
+      </div>
       <ChatPopup />
     </div>
   );

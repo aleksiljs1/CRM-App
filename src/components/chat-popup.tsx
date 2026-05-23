@@ -3,17 +3,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
-import { toast } from "sonner";
 import { getSocket } from "@/lib/socket-client";
-import { Button } from "@/components/ui/button";
 import {
-  MessageSquare,
   X,
-  ArrowLeft,
   Send,
   Paperclip,
   FileText,
   Loader2,
+  Minus,
+  Download,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -66,23 +64,20 @@ interface Conversation {
   hasUnread: boolean;
 }
 
+interface ChatPopupState {
+  conversationId: string;
+  otherUser: { id: string; name: string };
+  isExpanded: boolean;
+  messages: ChatMessage[];
+  unreadCount: number;
+  conversation: Conversation | null;
+  loadingMessages: boolean;
+  flash: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getDeptName(dept: string | null): string {
-  const map: Record<string, string> = {
-    AUDIT: "Audit & Advisory",
-    ACCOUNTING_TAX: "Accounting & Tax",
-    BOOKKEEPING_PAYROLL: "Bookkeeping & Payroll",
-    LEGAL: "Legal Advisory",
-    ADVISORY: "Advisory Services",
-    HR: "HR & Payroll",
-    MARKETING: "Marketing",
-    FINANCE: "Finance",
-  };
-  return dept ? map[dept] || dept : "All";
-}
 
 function timeAgo(date: string | Date): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -95,11 +90,19 @@ function timeAgo(date: string | Date): string {
   return `${days}d`;
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+/** Deduplicate messages by id, keeping the non-temp version if both exist */
+function deduplicateMessages(msgs: ChatMessage[]): ChatMessage[] {
+  const map = new Map<string, ChatMessage>();
+  for (const msg of msgs) {
+    // If this is a real message replacing a temp one, it wins
+    if (!map.has(msg.id)) {
+      map.set(msg.id, msg);
+    }
+  }
+  return Array.from(map.values());
 }
+
+const MAX_POPUPS = 3;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -109,77 +112,127 @@ export function ChatPopup() {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
 
-  // Popup state
-  const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<"list" | "chat">("list");
+  const [activeChats, setActiveChats] = useState<ChatPopupState[]>([]);
 
-  // Data
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loadingConversations, setLoadingConversations] = useState(false);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
-  const [activeConv, setActiveConv] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  // Per-popup message input state (keyed by conversationId)
+  const [inputTexts, setInputTexts] = useState<Record<string, string>>({});
+  const [inputAttachments, setInputAttachments] = useState<
+    Record<string, File[]>
+  >({});
+  const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({});
 
-  // Message input
-  const [messageText, setMessageText] = useState("");
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const [sending, setSending] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Typing indicators per conversation
+  const [typingUsers, setTypingUsers] = useState<Record<string, string | null>>(
+    {}
+  );
+  const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
 
-  // Typing
-  const [typingUser, setTypingUser] = useState<string | null>(null);
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Unread count
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Socket refs
+  // Socket
   const socketJoinedRef = useRef(false);
-  const activeConvRef = useRef<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const messagesEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const activeChatsRef = useRef<ChatPopupState[]>([]);
 
-  // ---- Scroll to bottom ----
-  const scrollToBottom = useCallback(() => {
+  // Keep ref in sync
+  useEffect(() => {
+    activeChatsRef.current = activeChats;
+  }, [activeChats]);
+
+  // ---- Scroll to bottom for a conversation ----
+  const scrollToBottom = useCallback((convId: string) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRefs.current[convId]?.scrollIntoView({ behavior: "smooth" });
     }, 50);
   }, []);
 
-  // ---- Fetch conversations ----
-  const fetchConversations = useCallback(async () => {
-    setLoadingConversations(true);
-    try {
-      const { data } = await axios.get("/api/chat/conversations");
-      setConversations(data.conversations);
-      const count = data.conversations.filter(
-        (c: Conversation) => c.hasUnread
-      ).length;
-      setUnreadCount(count);
-    } catch {
-      // Silently fail for popup
-    } finally {
-      setLoadingConversations(false);
-    }
-  }, []);
-
-  // ---- Fetch messages ----
+  // ---- Fetch messages for a conversation ----
   const fetchMessages = useCallback(
     async (convId: string) => {
-      setLoadingMessages(true);
+      setActiveChats((prev) =>
+        prev.map((c) =>
+          c.conversationId === convId ? { ...c, loadingMessages: true } : c
+        )
+      );
       try {
         const { data } = await axios.get(
           `/api/chat/conversations/${convId}/messages`
         );
-        setMessages(data.messages);
-        scrollToBottom();
+        setActiveChats((prev) =>
+          prev.map((c) =>
+            c.conversationId === convId
+              ? {
+                  ...c,
+                  messages: deduplicateMessages(data.messages),
+                  loadingMessages: false,
+                  unreadCount: 0,
+                }
+              : c
+          )
+        );
+        scrollToBottom(convId);
       } catch {
-        toast.error("Failed to load messages");
-      } finally {
-        setLoadingMessages(false);
+        setActiveChats((prev) =>
+          prev.map((c) =>
+            c.conversationId === convId
+              ? { ...c, loadingMessages: false }
+              : c
+          )
+        );
       }
     },
     [scrollToBottom]
+  );
+
+  // ---- Open or focus a chat popup ----
+  const openChatPopup = useCallback(
+    (
+      conversationId: string,
+      otherUser: { id: string; name: string },
+      conversation: Conversation | null,
+      expand: boolean
+    ) => {
+      setActiveChats((prev) => {
+        const existing = prev.find(
+          (c) => c.conversationId === conversationId
+        );
+        if (existing) {
+          return prev.map((c) =>
+            c.conversationId === conversationId
+              ? { ...c, isExpanded: expand, flash: false, unreadCount: 0 }
+              : c
+          );
+        }
+        // Add new popup, cap at MAX_POPUPS (remove oldest)
+        const newPopup: ChatPopupState = {
+          conversationId,
+          otherUser,
+          isExpanded: expand,
+          messages: [],
+          unreadCount: 0,
+          conversation,
+          loadingMessages: false,
+          flash: false,
+        };
+        const updated = [...prev, newPopup];
+        if (updated.length > MAX_POPUPS) {
+          updated.shift();
+        }
+        return updated;
+      });
+
+      // Join conversation room
+      const socket = getSocket();
+      socket.emit("join-conversation", conversationId);
+
+      // Fetch messages
+      if (expand) {
+        // Small delay to let state update
+        setTimeout(() => fetchMessages(conversationId), 50);
+      }
+    },
+    [fetchMessages]
   );
 
   // ---- Socket setup ----
@@ -188,349 +241,428 @@ export function ChatPopup() {
 
     const socket = getSocket();
 
-    if (!socketJoinedRef.current) {
+    // Join user room (re-join if userId changes or socket reconnects)
+    socket.emit("join", currentUserId);
+    socketJoinedRef.current = true;
+    console.log("[ChatPopup] Joined user room:", currentUserId);
+
+    socket.on("connect", () => {
+      // Re-join on reconnect
       socket.emit("join", currentUserId);
-      socketJoinedRef.current = true;
-    }
+      console.log("[ChatPopup] Re-joined user room after reconnect:", currentUserId);
+    });
 
     const handleNotification = (data: any) => {
-      // If we're currently viewing this conversation, add the message
-      if (data.conversationId === activeConvRef.current) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === data.messageId)) return prev;
-          const newMsg: ChatMessage = {
-            id: data.messageId,
-            body: data.body,
-            senderId: data.senderId,
-            sender: { id: data.senderId, name: data.senderName },
-            createdAt: data.createdAt,
-            attachments: data.attachments || [],
-          };
-          return [...prev, newMsg];
-        });
-        scrollToBottom();
+      // Don't handle our own messages via notification (we add them optimistically)
+      if (data.senderId === currentUserId) return;
+
+      const currentChats = activeChatsRef.current;
+      const existingChat = currentChats.find(
+        (c) => c.conversationId === data.conversationId
+      );
+
+      if (existingChat) {
+        // Chat popup already exists
+        const newMsg: ChatMessage = {
+          id: data.messageId,
+          body: data.body,
+          senderId: data.senderId,
+          sender: { id: data.senderId, name: data.senderName },
+          createdAt: data.createdAt,
+          attachments: data.attachments || [],
+        };
+
+        setActiveChats((prev) =>
+          prev.map((c) => {
+            if (c.conversationId !== data.conversationId) return c;
+            // Deduplicate
+            if (c.messages.some((m) => m.id === data.messageId)) return c;
+            return {
+              ...c,
+              messages: deduplicateMessages([...c.messages, newMsg]),
+              unreadCount: c.isExpanded ? 0 : c.unreadCount + 1,
+              flash: !c.isExpanded, // flash if minimized
+            };
+          })
+        );
+        scrollToBottom(data.conversationId);
       } else {
-        // Show toast for messages not in active popup conversation
-        if (data.senderId !== currentUserId) {
-          toast(`New message from ${data.senderName}`, {
-            description:
-              data.body?.slice(0, 60) + (data.body?.length > 60 ? "..." : ""),
-            action: {
-              label: "View",
-              onClick: () => {
-                setIsOpen(true);
-                // We'd need the conversation object - just refresh
-                fetchConversations();
-              },
-            },
-          });
-        }
+        // New incoming message - create a bar popup
+        openChatPopup(
+          data.conversationId,
+          { id: data.senderId, name: data.senderName },
+          null,
+          false // minimized bar
+        );
+        // Add the message
+        const newMsg: ChatMessage = {
+          id: data.messageId,
+          body: data.body,
+          senderId: data.senderId,
+          sender: { id: data.senderId, name: data.senderName },
+          createdAt: data.createdAt,
+          attachments: data.attachments || [],
+        };
+        // Use setTimeout to ensure popup was created first
+        setTimeout(() => {
+          setActiveChats((prev) =>
+            prev.map((c) =>
+              c.conversationId === data.conversationId
+                ? {
+                    ...c,
+                    messages: deduplicateMessages([...c.messages, newMsg]),
+                    unreadCount: 1,
+                    flash: true,
+                  }
+                : c
+            )
+          );
+        }, 100);
       }
-      // Update unread count
-      fetchConversations();
+    };
+
+    const handleNewMessage = (data: any) => {
+      // For messages received on the conversation room channel
+      if (data.senderId === currentUserId) return;
+
+      const currentChats = activeChatsRef.current;
+      const existingChat = currentChats.find(
+        (c) => c.conversationId === data.conversationId
+      );
+
+      if (existingChat) {
+        const newMsg: ChatMessage = {
+          id: data.messageId,
+          body: data.body,
+          senderId: data.senderId,
+          sender: { id: data.senderId, name: data.senderName },
+          createdAt: data.createdAt,
+          attachments: data.attachments || [],
+        };
+        setActiveChats((prev) =>
+          prev.map((c) => {
+            if (c.conversationId !== data.conversationId) return c;
+            if (c.messages.some((m) => m.id === data.messageId)) return c;
+            return {
+              ...c,
+              messages: deduplicateMessages([...c.messages, newMsg]),
+              unreadCount: c.isExpanded ? 0 : c.unreadCount + 1,
+              flash: !c.isExpanded,
+            };
+          })
+        );
+        scrollToBottom(data.conversationId);
+      }
     };
 
     const handleTyping = (data: any) => {
-      if (data.conversationId === activeConvRef.current) {
-        setTypingUser(data.userName);
-      }
+      setTypingUsers((prev) => ({
+        ...prev,
+        [data.conversationId]: data.userName,
+      }));
     };
 
     const handleStopTyping = (data: any) => {
-      if (data.conversationId === activeConvRef.current) {
-        setTypingUser(null);
-      }
+      setTypingUsers((prev) => ({
+        ...prev,
+        [data.conversationId]: null,
+      }));
     };
 
-    socket.on("new-message", handleNotification);
     socket.on("chat-notification", handleNotification);
+    socket.on("new-message", handleNewMessage);
     socket.on("user-typing", handleTyping);
     socket.on("user-stop-typing", handleStopTyping);
 
     return () => {
-      socket.off("new-message", handleNotification);
       socket.off("chat-notification", handleNotification);
+      socket.off("new-message", handleNewMessage);
       socket.off("user-typing", handleTyping);
       socket.off("user-stop-typing", handleStopTyping);
     };
-  }, [currentUserId, scrollToBottom, fetchConversations]);
+  }, [currentUserId, scrollToBottom, openChatPopup]);
 
-  // ---- Load conversations when popup opens ----
-  useEffect(() => {
-    if (isOpen) {
-      fetchConversations();
-    }
-  }, [isOpen, fetchConversations]);
+  // ---- Expand a chat bar ----
+  const expandChat = useCallback(
+    (convId: string) => {
+      setActiveChats((prev) =>
+        prev.map((c) =>
+          c.conversationId === convId
+            ? { ...c, isExpanded: true, flash: false, unreadCount: 0 }
+            : c
+        )
+      );
+      fetchMessages(convId);
+    },
+    [fetchMessages]
+  );
 
-  // ---- Initial fetch for unread count ----
-  useEffect(() => {
-    if (currentUserId) {
-      fetchConversations();
-    }
-  }, [currentUserId, fetchConversations]);
+  // ---- Minimize (collapse) a chat ----
+  const minimizeChat = useCallback((convId: string) => {
+    setActiveChats((prev) =>
+      prev.map((c) =>
+        c.conversationId === convId ? { ...c, isExpanded: false } : c
+      )
+    );
+  }, []);
 
-  // ---- Open a conversation in popup ----
-  const openConversation = async (conv: Conversation) => {
+  // ---- Close (remove) a chat popup ----
+  const closeChat = useCallback((convId: string) => {
     const socket = getSocket();
-
-    // Leave previous
-    if (activeConvRef.current) {
-      socket.emit("leave-conversation", activeConvRef.current);
-    }
-
-    setActiveConvId(conv.id);
-    setActiveConv(conv);
-    activeConvRef.current = conv.id;
-    setView("chat");
-    setTypingUser(null);
-
-    socket.emit("join-conversation", conv.id);
-    await fetchMessages(conv.id);
-    fetchConversations();
-  };
-
-  // ---- Go back to list ----
-  const goBack = () => {
-    const socket = getSocket();
-    if (activeConvRef.current) {
-      socket.emit("leave-conversation", activeConvRef.current);
-    }
-    setActiveConvId(null);
-    setActiveConv(null);
-    activeConvRef.current = null;
-    setView("list");
-    setMessages([]);
-    setTypingUser(null);
-    fetchConversations();
-  };
+    socket.emit("leave-conversation", convId);
+    setActiveChats((prev) =>
+      prev.filter((c) => c.conversationId !== convId)
+    );
+    // Clean up input state
+    setInputTexts((prev) => {
+      const copy = { ...prev };
+      delete copy[convId];
+      return copy;
+    });
+    setInputAttachments((prev) => {
+      const copy = { ...prev };
+      delete copy[convId];
+      return copy;
+    });
+  }, []);
 
   // ---- Send message ----
-  const handleSend = async () => {
-    if ((!messageText.trim() && attachments.length === 0) || !activeConvId)
-      return;
+  const handleSend = useCallback(
+    async (convId: string) => {
+      const body = (inputTexts[convId] || "").trim();
+      const files = inputAttachments[convId] || [];
+      if (!body && files.length === 0) return;
 
-    const body = messageText.trim();
-    setSending(true);
+      setSendingMap((prev) => ({ ...prev, [convId]: true }));
 
-    const optimisticMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      body,
-      senderId: currentUserId!,
-      sender: { id: currentUserId!, name: session?.user?.name || "You" },
-      createdAt: new Date().toISOString(),
-      attachments: [],
-    };
-    setMessages((prev) => [...prev, optimisticMsg]);
-    setMessageText("");
-    scrollToBottom();
-
-    try {
-      const formData = new FormData();
-      formData.append("body", body);
-      attachments.forEach((file) => formData.append("attachments", file));
-
-      const { data } = await axios.post(
-        `/api/chat/conversations/${activeConvId}/messages`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
-      );
-      setAttachments([]);
-      scrollToBottom();
-
-      const socket = getSocket();
-      const otherParticipants = activeConv?.participants
-        .filter((p) => p.userId !== currentUserId)
-        .map((p) => p.userId);
-
-      socket.emit("send-message", {
-        conversationId: activeConvId,
-        messageId: data.message.id,
-        senderId: currentUserId,
-        senderName: session?.user?.name,
+      const optimisticId = `temp-${Date.now()}-${Math.random()}`;
+      const optimisticMsg: ChatMessage = {
+        id: optimisticId,
         body,
-        createdAt: data.message.createdAt,
-        attachments: data.message.attachments,
-        recipientIds: otherParticipants,
-      });
+        senderId: currentUserId!,
+        sender: { id: currentUserId!, name: session?.user?.name || "You" },
+        createdAt: new Date().toISOString(),
+        attachments: [],
+      };
 
-      fetchConversations();
-    } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
-      setMessageText(body);
-      toast.error("Failed to send message");
-    } finally {
-      setSending(false);
-    }
-  };
+      setActiveChats((prev) =>
+        prev.map((c) =>
+          c.conversationId === convId
+            ? { ...c, messages: [...c.messages, optimisticMsg] }
+            : c
+        )
+      );
+      setInputTexts((prev) => ({ ...prev, [convId]: "" }));
+      scrollToBottom(convId);
 
-  // ---- Typing ----
-  const handleTypingEvent = () => {
-    if (!activeConvId || !currentUserId) return;
-    const socket = getSocket();
-    socket.emit("typing", {
-      conversationId: activeConvId,
-      userId: currentUserId,
-      userName: session?.user?.name || "Someone",
-    });
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = setTimeout(() => {
-      socket.emit("stop-typing", {
-        conversationId: activeConvId,
+      try {
+        const formData = new FormData();
+        formData.append("body", body);
+        files.forEach((file) => formData.append("attachments", file));
+
+        const { data } = await axios.post(
+          `/api/chat/conversations/${convId}/messages`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+
+        // Replace optimistic message with real one
+        setActiveChats((prev) =>
+          prev.map((c) =>
+            c.conversationId === convId
+              ? {
+                  ...c,
+                  messages: deduplicateMessages(
+                    c.messages.map((m) =>
+                      m.id === optimisticId ? data.message : m
+                    )
+                  ),
+                }
+              : c
+          )
+        );
+        setInputAttachments((prev) => ({ ...prev, [convId]: [] }));
+        scrollToBottom(convId);
+
+        // Emit via socket
+        const socket = getSocket();
+        const chat = activeChatsRef.current.find(
+          (c) => c.conversationId === convId
+        );
+        const otherParticipants = chat?.conversation?.participants
+          .filter((p) => p.userId !== currentUserId)
+          .map((p) => p.userId) || [chat?.otherUser.id].filter(Boolean);
+
+        socket.emit("send-message", {
+          conversationId: convId,
+          messageId: data.message.id,
+          senderId: currentUserId,
+          senderName: session?.user?.name,
+          body,
+          createdAt: data.message.createdAt,
+          attachments: data.message.attachments,
+          recipientIds: otherParticipants,
+        });
+      } catch {
+        // Remove optimistic message on failure
+        setActiveChats((prev) =>
+          prev.map((c) =>
+            c.conversationId === convId
+              ? {
+                  ...c,
+                  messages: c.messages.filter((m) => m.id !== optimisticId),
+                }
+              : c
+          )
+        );
+        setInputTexts((prev) => ({ ...prev, [convId]: body }));
+      } finally {
+        setSendingMap((prev) => ({ ...prev, [convId]: false }));
+      }
+    },
+    [currentUserId, session, inputTexts, inputAttachments, scrollToBottom]
+  );
+
+  // ---- Typing events ----
+  const handleTypingEvent = useCallback(
+    (convId: string) => {
+      if (!currentUserId) return;
+      const socket = getSocket();
+      socket.emit("typing", {
+        conversationId: convId,
         userId: currentUserId,
+        userName: session?.user?.name || "Someone",
       });
-    }, 2000);
-  };
-
-  // ---- Get other participant ----
-  const getOtherParticipant = (conv: Conversation): ChatUser | null => {
-    const other = conv.participants.find((p) => p.userId !== currentUserId);
-    return other?.user || null;
-  };
-
-  const activeChatUser = activeConv ? getOtherParticipant(activeConv) : null;
+      if (typingTimersRef.current[convId]) {
+        clearTimeout(typingTimersRef.current[convId]);
+      }
+      typingTimersRef.current[convId] = setTimeout(() => {
+        socket.emit("stop-typing", {
+          conversationId: convId,
+          userId: currentUserId,
+        });
+      }, 2000);
+    },
+    [currentUserId, session]
+  );
 
   if (!currentUserId) return null;
 
-  return (
-    <>
-      {/* Floating button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg transition-transform hover:scale-105 hover:bg-brand-700 active:scale-95"
-      >
-        <MessageSquare className="h-6 w-6" />
-        {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+  // Nothing to render if no active chats
+  if (activeChats.length === 0) return null;
 
-      {/* Popup panel */}
-      <div
-        className={`fixed bottom-24 right-6 z-50 flex flex-col overflow-hidden rounded-2xl border bg-card shadow-2xl transition-all duration-300 ${
-          isOpen
-            ? "h-[500px] w-[350px] opacity-100 scale-100"
-            : "h-0 w-0 opacity-0 scale-95 pointer-events-none"
-        }`}
-      >
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b bg-brand-600 px-4 py-3 text-white">
-          {view === "chat" && activeChatUser ? (
-            <div className="flex items-center gap-2">
-              <button onClick={goBack} className="hover:bg-white/20 rounded p-1">
-                <ArrowLeft className="h-4 w-4" />
+  return (
+    <div className="fixed bottom-0 right-6 z-50 flex items-end gap-2">
+      {activeChats.map((chat) => {
+        const sending = sendingMap[chat.conversationId] || false;
+        const messageText = inputTexts[chat.conversationId] || "";
+        const attachments = inputAttachments[chat.conversationId] || [];
+        const typing = typingUsers[chat.conversationId];
+        const lastMsg =
+          chat.messages.length > 0
+            ? chat.messages[chat.messages.length - 1]
+            : null;
+        const previewText = lastMsg
+          ? lastMsg.body.length > 30
+            ? lastMsg.body.slice(0, 30) + "..."
+            : lastMsg.body
+          : "New conversation";
+
+        if (!chat.isExpanded) {
+          // ---- Minimized bar ----
+          return (
+            <div
+              key={chat.conversationId}
+              className={`flex items-center gap-2 rounded-t-lg bg-[#00968a] px-3 py-2.5 text-white shadow-lg cursor-pointer select-none transition-all ${
+                chat.flash ? "animate-pulse" : ""
+              }`}
+              style={{ width: 280, height: 44 }}
+              onClick={() => expandChat(chat.conversationId)}
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <span className="text-xs font-medium">
+                  {chat.otherUser.name?.charAt(0)?.toUpperCase() || "?"}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold truncate">
+                    {chat.otherUser.name}
+                  </span>
+                  {chat.unreadCount > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold">
+                      {chat.unreadCount}
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-[10px] text-white/70">
+                  {previewText}
+                </p>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeChat(chat.conversationId);
+                }}
+                className="shrink-0 rounded p-0.5 hover:bg-white/20"
+              >
+                <X className="h-3.5 w-3.5" />
               </button>
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
+            </div>
+          );
+        }
+
+        // ---- Expanded chat window ----
+        return (
+          <div
+            key={chat.conversationId}
+            className="flex flex-col overflow-hidden rounded-t-lg border bg-white shadow-2xl"
+            style={{ width: 340, height: 480 }}
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between bg-[#00968a] px-3 py-2.5 text-white">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20">
                   <span className="text-xs font-medium">
-                    {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}
+                    {chat.otherUser.name?.charAt(0)?.toUpperCase() || "?"}
                   </span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium leading-tight">
-                    {activeChatUser.name}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium leading-tight truncate">
+                    {chat.otherUser.name}
                   </p>
-                  {typingUser && (
+                  {typing && (
                     <p className="text-[10px] text-white/70 italic animate-pulse">
                       typing...
                     </p>
                   )}
                 </div>
               </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => minimizeChat(chat.conversationId)}
+                  className="rounded p-1 hover:bg-white/20"
+                  title="Minimize"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => closeChat(chat.conversationId)}
+                  className="rounded p-1 hover:bg-white/20"
+                  title="Close"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-          ) : (
-            <span className="text-sm font-semibold">Messages</span>
-          )}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="rounded p-1 hover:bg-white/20"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
 
-        {view === "list" ? (
-          // ---- Conversation list ----
-          <div className="flex-1 overflow-y-auto">
-            {loadingConversations ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center px-4">
-                <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-xs text-muted-foreground">
-                  No conversations yet
-                </p>
-              </div>
-            ) : (
-              conversations.map((conv) => {
-                const other = getOtherParticipant(conv);
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => openConversation(conv)}
-                    className="w-full border-b px-3 py-2.5 text-left transition-colors hover:bg-muted/50 last:border-b-0"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                        <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
-                          {other?.name?.charAt(0)?.toUpperCase() || "?"}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`text-xs truncate ${
-                              conv.hasUnread
-                                ? "font-semibold text-foreground"
-                                : "font-medium text-foreground/80"
-                            }`}
-                          >
-                            {other?.name || "Unknown"}
-                          </span>
-                          {conv.lastMessage && (
-                            <span className="shrink-0 text-[10px] text-muted-foreground">
-                              {timeAgo(conv.lastMessage.createdAt)}
-                            </span>
-                          )}
-                        </div>
-                        {conv.lastMessage && (
-                          <p className="truncate text-[11px] text-muted-foreground mt-0.5">
-                            {conv.lastMessage.senderId === currentUserId
-                              ? "You: "
-                              : ""}
-                            {conv.lastMessage.body.slice(0, 40)}
-                            {conv.lastMessage.body.length > 40 ? "..." : ""}
-                          </p>
-                        )}
-                      </div>
-                      {conv.hasUnread && (
-                        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                          !
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        ) : (
-          // ---- Chat view ----
-          <>
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-3 py-3">
-              {loadingMessages ? (
+              {chat.loadingMessages ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-5 w-5 animate-spin text-brand-600 dark:text-brand-400" />
+                  <Loader2 className="h-5 w-5 animate-spin text-[#00968a]" />
                 </div>
-              ) : messages.length === 0 ? (
+              ) : chat.messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <p className="text-xs text-muted-foreground">
                     No messages yet
@@ -538,7 +670,7 @@ export function ChatPopup() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {messages.map((msg) => {
+                  {deduplicateMessages(chat.messages).map((msg) => {
                     const isOwn = msg.senderId === currentUserId;
                     return (
                       <div
@@ -550,13 +682,13 @@ export function ChatPopup() {
                         <div
                           className={`max-w-[80%] rounded-xl px-3 py-2 ${
                             isOwn
-                              ? "rounded-br-sm bg-brand-600 text-white"
-                              : "rounded-bl-sm bg-muted"
+                              ? "rounded-br-sm bg-[#00968a] text-white"
+                              : "rounded-bl-sm bg-gray-100"
                           }`}
                         >
                           <p
                             className={`text-xs leading-relaxed whitespace-pre-wrap ${
-                              isOwn ? "text-white/95" : "text-foreground"
+                              isOwn ? "text-white/95" : "text-gray-900"
                             }`}
                           >
                             {msg.body}
@@ -564,21 +696,29 @@ export function ChatPopup() {
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {msg.attachments.map((att) => (
-                                <a
+                                <div
                                   key={att.id}
-                                  href={att.filePath}
-                                  target="_blank"
                                   className={`inline-flex items-center gap-1 px-2 py-1 border rounded text-[10px] ${
                                     isOwn
                                       ? "bg-white/20 border-white/30 text-white"
-                                      : "bg-card/80 border-border"
+                                      : "bg-white/80 border-gray-200"
                                   }`}
                                 >
                                   <FileText className="h-3 w-3" />
                                   <span className="max-w-[80px] truncate">
                                     {att.fileName}
                                   </span>
-                                </a>
+                                  <a
+                                    href={`/api/attachments/${att.id}`}
+                                    download={att.fileName}
+                                    className={`p-0.5 rounded hover:bg-black/10 ${
+                                      isOwn ? "text-white/70" : "text-gray-500"
+                                    }`}
+                                    title="Download"
+                                  >
+                                    <Download className="h-2.5 w-2.5" />
+                                  </a>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -586,7 +726,7 @@ export function ChatPopup() {
                             className={`mt-1 text-[9px] ${
                               isOwn
                                 ? "text-white/50"
-                                : "text-muted-foreground/60"
+                                : "text-gray-400"
                             }`}
                           >
                             {timeAgo(msg.createdAt)}
@@ -595,7 +735,11 @@ export function ChatPopup() {
                       </div>
                     );
                   })}
-                  <div ref={messagesEndRef} />
+                  <div
+                    ref={(el) => {
+                      messagesEndRefs.current[chat.conversationId] = el;
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -607,17 +751,20 @@ export function ChatPopup() {
                   {attachments.map((file, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded text-[10px]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-[10px]"
                     >
                       <Paperclip className="h-2.5 w-2.5" />
                       <span className="max-w-[80px] truncate">{file.name}</span>
                       <button
                         onClick={() =>
-                          setAttachments((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
+                          setInputAttachments((prev) => ({
+                            ...prev,
+                            [chat.conversationId]: (
+                              prev[chat.conversationId] || []
+                            ).filter((_, idx) => idx !== i),
+                          }))
                         }
-                        className="text-muted-foreground hover:text-red-500 ml-0.5"
+                        className="text-gray-400 hover:text-red-500 ml-0.5"
                       >
                         x
                       </button>
@@ -627,22 +774,30 @@ export function ChatPopup() {
               )}
               <div className="flex items-end gap-2">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="shrink-0 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() =>
+                    fileInputRefs.current[chat.conversationId]?.click()
+                  }
+                  className="shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
                 <input
-                  ref={fileInputRef}
+                  ref={(el) => {
+                    fileInputRefs.current[chat.conversationId] = el;
+                  }}
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
                   multiple
                   className="hidden"
                   onChange={(e) => {
-                    if (e.target.files) {
-                      setAttachments((prev) => [
+                    if (e.target.files && e.target.files.length > 0) {
+                      setInputAttachments((prev) => ({
                         ...prev,
-                        ...Array.from(e.target.files!),
-                      ]);
+                        [chat.conversationId]: [
+                          ...(prev[chat.conversationId] || []),
+                          ...Array.from(e.target.files!),
+                        ],
+                      }));
                       e.target.value = "";
                     }
                   }}
@@ -650,31 +805,26 @@ export function ChatPopup() {
                 <textarea
                   value={messageText}
                   onChange={(e) => {
-                    setMessageText(e.target.value);
-                    handleTypingEvent();
+                    setInputTexts((prev) => ({
+                      ...prev,
+                      [chat.conversationId]: e.target.value,
+                    }));
+                    handleTypingEvent(chat.conversationId);
                   }}
                   placeholder="Type a message..."
                   rows={1}
-                  className="flex-1 resize-none rounded-lg border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-brand-500/30"
+                  className="flex-1 resize-none rounded-lg border bg-white px-3 py-2 text-xs placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#00968a]/30"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      handleSend();
-                    }
-                    // Also send on just Enter (no shift) for popup chat
-                    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-                      e.preventDefault();
-                      handleSend();
+                      handleSend(chat.conversationId);
                     }
                   }}
                 />
                 <button
-                  onClick={handleSend}
-                  disabled={
-                    sending ||
-                    (!messageText.trim() && attachments.length === 0)
-                  }
-                  className="shrink-0 rounded-lg bg-brand-600 p-2 text-white disabled:opacity-50 hover:bg-brand-700 transition-colors"
+                  onClick={() => handleSend(chat.conversationId)}
+                  disabled={sending || (!messageText.trim() && attachments.length === 0)}
+                  className="shrink-0 rounded-lg bg-[#00968a] p-2 text-white disabled:opacity-50 hover:bg-[#007d73] transition-colors"
                 >
                   {sending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -684,9 +834,9 @@ export function ChatPopup() {
                 </button>
               </div>
             </div>
-          </>
-        )}
-      </div>
-    </>
+          </div>
+        );
+      })}
+    </div>
   );
 }

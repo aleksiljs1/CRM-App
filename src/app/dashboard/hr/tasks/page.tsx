@@ -728,8 +728,10 @@ function NewTaskForm({
   }, []);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) {
-      setTaskAttachments((prev) => [...prev, ...Array.from(e.target.files!)]);
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setTaskAttachments((prev) => [...prev, ...newFiles]);
+      toast.success(`${newFiles.length} file(s) attached`);
     }
     // Reset input so the same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -756,10 +758,13 @@ function NewTaskForm({
       await axios.post("/api/tasks", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      toast.success("Task created successfully");
       setTaskAttachments([]);
       onCreated();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Failed to create task";
+      toast.error(msg);
       console.error("Failed to create task:", err);
     } finally {
       setSubmitting(false);

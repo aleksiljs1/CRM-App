@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notify";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   TODO: ["IN_PROGRESS"],
@@ -290,6 +291,97 @@ export async function PATCH(
         },
       },
     });
+
+    // ── Notifications ──
+    try {
+      const userName = session.user.name ?? "Someone";
+
+      // 1. Task moved to REVIEW → Notify department manager
+      if (status === "REVIEW" && task.department) {
+        const deptManager = await prisma.user.findFirst({
+          where: {
+            department: task.department as any,
+            role: "MANAGER",
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (deptManager) {
+          await createNotification({
+            userId: deptManager.id,
+            title: "Task Ready for Review",
+            message: `'${task.title}' submitted for review by ${userName}. Assign a reviewer.`,
+            type: "TASK",
+            link: "/dashboard/hr/tasks",
+          });
+        }
+      }
+
+      // 2. Task moved to APPROVED → Notify department manager
+      if (status === "APPROVED" && task.department) {
+        const deptManager = await prisma.user.findFirst({
+          where: {
+            department: task.department as any,
+            role: "MANAGER",
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        if (deptManager) {
+          await createNotification({
+            userId: deptManager.id,
+            title: "Task Approved",
+            message: `'${task.title}' approved by ${userName}. Ready for completion.`,
+            type: "TASK",
+            link: "/dashboard/hr/tasks",
+          });
+        }
+      }
+
+      // 3. Task assigned to someone (reviewer or worker) → Notify assignee
+      if (
+        assignedToId &&
+        updated.assignedTo &&
+        assignedToId !== session.user.id
+      ) {
+        await createNotification({
+          userId: assignedToId,
+          title: "New Task Assignment",
+          message: `You've been assigned to '${task.title}'.`,
+          type: "TASK",
+          link: "/dashboard/hr/tasks",
+        });
+      }
+
+      // 4. Task sent back (REVIEW → IN_PROGRESS) → Notify original worker
+      if (
+        task.status === "REVIEW" &&
+        status === "IN_PROGRESS" &&
+        updated.assignedTo
+      ) {
+        await createNotification({
+          userId: updated.assignedTo.id,
+          title: "Revision Required",
+          message: `'${task.title}' needs revision. Please review the feedback.`,
+          type: "TASK",
+          link: "/dashboard/hr/tasks",
+        });
+      }
+
+      // 5. Task completed → Notify original creator
+      if (status === "COMPLETED" && task.createdById) {
+        await createNotification({
+          userId: task.createdById,
+          title: "Task Completed",
+          message: `'${task.title}' has been completed.`,
+          type: "TASK",
+          link: "/dashboard/hr/tasks",
+        });
+      }
+    } catch (notifError) {
+      // Don't fail the request if notification creation fails
+      console.error("Error creating notification:", notifError);
+    }
 
     return Response.json({ task: updated });
   } catch (error) {

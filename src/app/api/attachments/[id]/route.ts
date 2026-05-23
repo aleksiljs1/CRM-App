@@ -16,14 +16,21 @@ export async function GET(
 
     const { id } = await params;
 
-    // Try EmailAttachment first, then TaskAttachment
+    // Try EmailAttachment first, then TaskAttachment, then MessageAttachment
     const emailAttachment = await prisma.emailAttachment.findUnique({
       where: { id },
     });
 
-    const attachment = emailAttachment ?? await prisma.taskAttachment.findUnique({
-      where: { id },
-    });
+    const taskAttachment = emailAttachment
+      ? null
+      : await prisma.taskAttachment.findUnique({ where: { id } });
+
+    const messageAttachment =
+      emailAttachment || taskAttachment
+        ? null
+        : await prisma.messageAttachment.findUnique({ where: { id } });
+
+    const attachment = emailAttachment ?? taskAttachment ?? messageAttachment;
 
     if (!attachment) {
       return Response.json(

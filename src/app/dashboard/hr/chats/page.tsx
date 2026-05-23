@@ -18,6 +18,7 @@ import {
   Loader2,
   Users,
   Clock,
+  Download,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -106,13 +107,26 @@ function getFileIcon(mimeType: string) {
     return <FileText className="h-3.5 w-3.5 text-blue-500" />;
   if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
     return <FileText className="h-3.5 w-3.5 text-green-500" />;
-  return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
+  return <FileText className="h-3.5 w-3.5 text-gray-500" />;
 }
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+/** Deduplicate messages by id, keeping the non-temp version */
+function deduplicateMessages(msgs: ChatMessage[]): ChatMessage[] {
+  const map = new Map<string, ChatMessage>();
+  for (const msg of msgs) {
+    const existing = map.get(msg.id);
+    // Prefer non-temp messages over temp ones
+    if (!existing || existing.id.startsWith("temp-")) {
+      map.set(msg.id, msg);
+    }
+  }
+  return Array.from(map.values());
 }
 
 // ---------------------------------------------------------------------------
@@ -142,7 +156,7 @@ function MessagesSkeleton() {
         <div
           key={i}
           className={`animate-pulse rounded-xl p-4 ${
-            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-brand-200/60 dark:bg-brand-800/40"
+            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-[#00968a]/20"
           }`}
         >
           <div className="mb-2 h-3 w-24 rounded bg-muted-foreground/20" />
@@ -268,7 +282,7 @@ export default function ChatsPage() {
         const { data } = await axios.get(
           `/api/chat/conversations/${convId}/messages`
         );
-        setMessages(data.messages);
+        setMessages(deduplicateMessages(data.messages));
         scrollToBottom();
       } catch {
         toast.error("Failed to load messages");
@@ -299,6 +313,7 @@ export default function ChatsPage() {
     if (!socketJoinedRef.current) {
       socket.emit("join", currentUserId);
       socketJoinedRef.current = true;
+      console.log("[ChatsPage] Joined user room:", currentUserId);
     }
 
     const handleNewMessage = (data: any) => {
@@ -317,7 +332,7 @@ export default function ChatsPage() {
             createdAt: data.createdAt,
             attachments: data.attachments || [],
           };
-          return [...prev, newMsg];
+          return deduplicateMessages([...prev, newMsg]);
         });
         scrollToBottom();
       }
@@ -436,9 +451,11 @@ export default function ChatsPage() {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      // Replace optimistic message with real one
+      // Replace optimistic message with real one and deduplicate
       setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
+        deduplicateMessages(
+          prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
+        )
       );
       setAttachments([]);
       scrollToBottom();
@@ -505,8 +522,8 @@ export default function ChatsPage() {
     <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
-          <MessageSquare className="h-5 w-5 text-brand-600 dark:text-brand-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00968a]/10">
+          <MessageSquare className="h-5 w-5 text-[#00968a]" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Chats</h1>
@@ -529,7 +546,7 @@ export default function ChatsPage() {
                 value={searchInput}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 placeholder="Search..."
-                className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
               />
             </div>
           </div>
@@ -540,7 +557,7 @@ export default function ChatsPage() {
               onClick={() => setActiveTab("recent")}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "recent"
-                  ? "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400"
+                  ? "border-b-2 border-[#00968a] text-[#00968a]"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -551,7 +568,7 @@ export default function ChatsPage() {
               onClick={() => setActiveTab("people")}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === "people"
-                  ? "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400"
+                  ? "border-b-2 border-[#00968a] text-[#00968a]"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -596,15 +613,15 @@ export default function ChatsPage() {
                         onClick={() => openConversation(conv)}
                         className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
                           isSelected
-                            ? "bg-brand-100/70 dark:bg-brand-900/30 border-l-2 border-l-brand-500"
+                            ? "bg-[#00968a]/8 border-l-2 border-l-[#00968a]"
                             : "hover:bg-muted/50 border-l-2 border-l-transparent"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                                <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
+                                <span className="text-xs font-medium text-[#00968a]">
                                   {other?.name?.charAt(0)?.toUpperCase() || "?"}
                                 </span>
                               </div>
@@ -664,7 +681,7 @@ export default function ChatsPage() {
                   <select
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
-                    className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                    className="h-9 w-full rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
                   >
                     {DEPARTMENT_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -693,8 +710,8 @@ export default function ChatsPage() {
                       className="group w-full border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                          <span className="text-xs font-medium text-brand-600 dark:text-brand-400">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00968a]/10">
+                          <span className="text-xs font-medium text-[#00968a]">
                             {user.name?.charAt(0)?.toUpperCase() || "?"}
                           </span>
                         </div>
@@ -743,8 +760,8 @@ export default function ChatsPage() {
               {activeChatUser && (
                 <div className="shrink-0 border-b px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100/70 dark:bg-brand-900/40">
-                      <span className="text-sm font-medium text-brand-600 dark:text-brand-400">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#00968a]/10">
+                      <span className="text-sm font-medium text-[#00968a]">
                         {activeChatUser.name?.charAt(0)?.toUpperCase() || "?"}
                       </span>
                     </div>
@@ -764,7 +781,7 @@ export default function ChatsPage() {
                     </div>
                   </div>
                   {typingUser && (
-                    <p className="mt-1 text-xs text-brand-600 dark:text-brand-400 italic animate-pulse">
+                    <p className="mt-1 text-xs text-[#00968a] italic animate-pulse">
                       {typingUser} is typing...
                     </p>
                   )}
@@ -786,7 +803,7 @@ export default function ChatsPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {messages.map((msg) => {
+                    {deduplicateMessages(messages).map((msg) => {
                       const isOwn = msg.senderId === currentUserId;
                       return (
                         <div
@@ -798,7 +815,7 @@ export default function ChatsPage() {
                           <div
                             className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                               isOwn
-                                ? "rounded-br-md bg-brand-600 text-white"
+                                ? "rounded-br-md bg-[#00968a] text-white"
                                 : "rounded-bl-md bg-muted"
                             }`}
                           >
@@ -824,14 +841,12 @@ export default function ChatsPage() {
                             {msg.attachments && msg.attachments.length > 0 && (
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {msg.attachments.map((att) => (
-                                  <a
+                                  <div
                                     key={att.id}
-                                    href={att.filePath}
-                                    target="_blank"
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${
                                       isOwn
-                                        ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
-                                        : "bg-card/80 border-border hover:bg-muted"
+                                        ? "bg-white/20 border-white/30 text-white"
+                                        : "bg-white/80 border-gray-200"
                                     }`}
                                   >
                                     {getFileIcon(att.mimeType)}
@@ -840,14 +855,22 @@ export default function ChatsPage() {
                                     </span>
                                     <span
                                       className={
-                                        isOwn
-                                          ? "text-white/50"
-                                          : "text-muted-foreground"
+                                        isOwn ? "text-white/50" : "text-gray-400"
                                       }
                                     >
                                       ({formatFileSize(att.fileSize)})
                                     </span>
-                                  </a>
+                                    <a
+                                      href={`/api/attachments/${att.id}`}
+                                      download={att.fileName}
+                                      className={`ml-1 p-0.5 rounded hover:bg-black/10 ${
+                                        isOwn ? "text-white/70 hover:text-white" : "text-gray-500 hover:text-gray-700"
+                                      }`}
+                                      title="Download"
+                                    >
+                                      <Download className="h-3.5 w-3.5" />
+                                    </a>
+                                  </div>
                                 ))}
                               </div>
                             )}
@@ -871,7 +894,7 @@ export default function ChatsPage() {
                   }}
                   placeholder="Type a message..."
                   rows={2}
-                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  className="w-full resize-y min-h-[60px] max-h-[150px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       e.preventDefault();
@@ -884,7 +907,7 @@ export default function ChatsPage() {
                     {attachments.map((file, i) => (
                       <div
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded text-xs"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs"
                       >
                         <Paperclip className="h-3 w-3" />
                         <span className="max-w-[120px] truncate">
@@ -896,7 +919,7 @@ export default function ChatsPage() {
                               prev.filter((_, idx) => idx !== i)
                             )
                           }
-                          className="text-muted-foreground hover:text-red-500 ml-1"
+                          className="text-gray-400 hover:text-red-500 ml-1"
                         >
                           x
                         </button>
@@ -907,14 +930,14 @@ export default function ChatsPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.csv"
                   multiple
                   className="hidden"
                   onChange={(e) => {
-                    if (e.target.files) {
-                      setAttachments((prev) => [
-                        ...prev,
-                        ...Array.from(e.target.files!),
-                      ]);
+                    if (e.target.files && e.target.files.length > 0) {
+                      const newFiles = Array.from(e.target.files);
+                      setAttachments((prev) => [...prev, ...newFiles]);
+                      toast.success(`${newFiles.length} file(s) attached`);
                       e.target.value = "";
                     }
                   }}
@@ -927,7 +950,7 @@ export default function ChatsPage() {
                     className="gap-2 rounded-xl text-sm"
                   >
                     <Paperclip className="h-4 w-4" />
-                    Attach
+                    {attachments.length > 0 ? `${attachments.length} file(s)` : "Attach"}
                   </Button>
                   <div className="flex items-center gap-2">
                     <Button
@@ -936,7 +959,7 @@ export default function ChatsPage() {
                         sending ||
                         (!messageText.trim() && attachments.length === 0)
                       }
-                      className="gap-2 rounded-xl bg-brand-600 px-5 py-3 text-white hover:bg-brand-700"
+                      className="gap-2 rounded-xl bg-[#00968a] px-5 py-3 text-white hover:bg-[#007d73]"
                     >
                       {sending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
