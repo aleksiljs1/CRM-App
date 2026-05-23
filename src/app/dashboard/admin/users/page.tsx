@@ -410,7 +410,7 @@ export default function AdminUsersPage() {
   if (error) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-600 dark:text-red-400">{error}</p>
       </div>
     );
   }

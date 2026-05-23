@@ -429,7 +429,7 @@ export default function LegalProcessesPage() {
                     {/* Client documents */}
                     <div>
                       <div className="flex items-center gap-1.5 mb-2">
-                        <Users className="size-3 text-blue-600" />
+                        <Users className="size-3 text-blue-600 dark:text-blue-400" />
                         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:text-blue-300">
                           Client Documents
                         </span>
@@ -448,7 +448,7 @@ export default function LegalProcessesPage() {
                                 key={doc.id}
                                 className="flex items-center gap-3 rounded-lg bg-card border px-4 py-2.5"
                               >
-                                <FileText className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                <FileText className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-foreground">
                                     {doc.documentName}
@@ -477,7 +477,7 @@ export default function LegalProcessesPage() {
                     {/* Internal documents */}
                     <div>
                       <div className="flex items-center gap-1.5 mb-2">
-                        <Building2 className="size-3 text-violet-600" />
+                        <Building2 className="size-3 text-violet-600 dark:text-violet-400" />
                         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-violet-700 dark:text-violet-300">
                           Internal Documents
                         </span>
@@ -496,7 +496,7 @@ export default function LegalProcessesPage() {
                                 key={doc.id}
                                 className="flex items-center gap-3 rounded-lg bg-card border px-4 py-2.5"
                               >
-                                <FileText className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                                <FileText className="h-3.5 w-3.5 text-violet-500 dark:text-violet-400 shrink-0" />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium text-foreground">
                                     {doc.documentName}
@@ -679,7 +679,7 @@ export default function LegalProcessesPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <Users className="size-4 text-blue-600" />
+                    <Users className="size-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-sm font-semibold text-foreground">
                       Client Documents
                     </span>
@@ -720,7 +720,7 @@ export default function LegalProcessesPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <Building2 className="size-4 text-violet-600" />
+                    <Building2 className="size-4 text-violet-600 dark:text-violet-400" />
                     <span className="text-sm font-semibold text-foreground">
                       Internal Documents
                     </span>
@@ -835,7 +835,7 @@ function DocRowForm({
       <button
         type="button"
         onClick={onRemove}
-        className="mt-1 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-red-600 transition-colors"
+        className="mt-1 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>

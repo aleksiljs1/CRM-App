@@ -289,9 +289,12 @@ export function AppSidebar() {
       >
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-600">
-            <span className="text-sm font-bold text-white">K</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="Kreston logo"
+            className="h-8 w-8 object-contain"
+          />
           <span className="text-lg font-semibold text-foreground">Kreston CRM</span>
           {/* Mobile-only close button */}
           <button

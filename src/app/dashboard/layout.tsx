@@ -16,6 +16,12 @@ export default function DashboardLayout({
         <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card px-3 md:justify-end md:px-6">
           <div className="flex items-center gap-2 md:hidden">
             <MobileMenuButton />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="Kreston logo"
+              className="h-6 w-6 object-contain"
+            />
             <span className="text-sm font-semibold text-foreground">
               Kreston CRM
             </span>
