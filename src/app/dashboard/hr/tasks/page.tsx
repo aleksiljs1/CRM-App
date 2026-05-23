@@ -22,6 +22,8 @@ import {
   Search,
   Loader2,
   Paperclip,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -44,6 +46,23 @@ interface TaskStatusHistoryEntry {
   toStatus: string;
   changedAt: string;
   changedBy?: { id: string; name: string };
+}
+
+interface TaskCommentEntry {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { id: string; name: string; role: string };
+}
+
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0] ?? "")
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 interface Task {
@@ -103,47 +122,47 @@ const STATUS_CONFIG: Record<
 > = {
   TODO: {
     label: "To Do",
-    color: "bg-gray-100 text-gray-700",
-    borderColor: "border-t-gray-400",
-    bgColor: "bg-gray-50",
+    color: "bg-muted text-foreground/80 dark:bg-muted dark:text-foreground/80",
+    borderColor: "border-t-muted-foreground/40",
+    bgColor: "bg-muted/50",
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "bg-blue-100 text-blue-700",
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     borderColor: "border-t-blue-500",
-    bgColor: "bg-blue-50/30",
+    bgColor: "bg-blue-50/30 dark:bg-blue-950/30",
   },
   REVIEW: {
     label: "Review",
-    color: "bg-amber-100 text-amber-700",
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
     borderColor: "border-t-amber-500",
-    bgColor: "bg-amber-50/30",
+    bgColor: "bg-amber-50/30 dark:bg-amber-950/30",
   },
   APPROVED: {
     label: "Approved",
-    color: "bg-teal-100 text-teal-700",
-    borderColor: "border-t-[#00968a]",
-    bgColor: "bg-teal-50/30",
+    color: "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300",
+    borderColor: "border-t-brand-500",
+    bgColor: "bg-teal-50/30 dark:bg-teal-950/30",
   },
   COMPLETED: {
     label: "Completed",
-    color: "bg-green-100 text-green-700",
+    color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
     borderColor: "border-t-green-500",
-    bgColor: "bg-green-50/30",
+    bgColor: "bg-green-50/30 dark:bg-green-950/30",
   },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
-  URGENT: { label: "Urgent", color: "bg-red-100 text-red-700 border-red-200" },
+  URGENT: { label: "Urgent", color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800/50" },
   HIGH: {
     label: "High",
-    color: "bg-orange-100 text-orange-700 border-orange-200",
+    color: "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800/50",
   },
   MEDIUM: {
     label: "Medium",
-    color: "bg-amber-100 text-amber-700 border-amber-200",
+    color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800/50",
   },
-  LOW: { label: "Low", color: "bg-gray-100 text-gray-600 border-gray-200" },
+  LOW: { label: "Low", color: "bg-muted text-muted-foreground border-border" },
 };
 
 const NEXT_STATUS: Record<string, string> = {
@@ -223,14 +242,14 @@ function TaskCard({
           </Badge>
         )}
         {task.department && (
-          <Badge variant="outline" className="text-xs bg-slate-50">
+          <Badge variant="outline" className="text-xs bg-muted/50">
             {task.department.replace("_", " ")}
           </Badge>
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span className={`flex items-center gap-1 ${isOverdue && task.status !== "COMPLETED" ? "text-red-600 font-medium" : ""}`}>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className={`flex items-center gap-1 ${isOverdue && task.status !== "COMPLETED" ? "text-red-600 dark:text-red-400 font-medium" : ""}`}>
           {isOverdue && task.status !== "COMPLETED" ? (
             <AlertTriangle className="w-3 h-3" />
           ) : (
@@ -245,7 +264,7 @@ function TaskCard({
               <span>{task.attachments.length}</span>
             </div>
           )}
-          <span className={`truncate ${task.status === "REVIEW" && !task.assignedTo ? "text-amber-600 font-medium" : ""}`}>
+          <span className={`truncate ${task.status === "REVIEW" && !task.assignedTo ? "text-amber-600 dark:text-amber-400 font-medium" : ""}`}>
             {task.status === "REVIEW" && !task.assignedTo
               ? "Needs Reviewer"
               : task.status === "REVIEW" && task.assignedTo
@@ -276,16 +295,16 @@ function WorkflowBar({ currentStatus }: { currentStatus: string }) {
           <div key={s} className="flex items-center gap-1">
             {i > 0 && (
               <div
-                className={`w-4 h-0.5 ${isPast ? "bg-green-400" : "bg-gray-200"}`}
+                className={`w-4 h-0.5 ${isPast ? "bg-green-400" : "bg-muted"}`}
               />
             )}
             <div
               className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
                 isPast
-                  ? "bg-green-100 text-green-700"
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                   : isCurrent
-                    ? "bg-[#00968a] text-white"
-                    : "bg-gray-100 text-gray-400"
+                    ? "bg-brand-600 text-white"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {config.label}
@@ -293,6 +312,132 @@ function WorkflowBar({ currentStatus }: { currentStatus: string }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Comments Section (Trello-style) ────────────────────────────────────────
+
+function CommentsSection({ taskId }: { taskId: string }) {
+  const [comments, setComments] = useState<TaskCommentEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [body, setBody] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    axios
+      .get(`/api/tasks/${taskId}/comments`)
+      .then((res) => {
+        if (!cancelled) setComments(res.data.comments || []);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Failed to load comments");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [taskId]);
+
+  async function handleAdd() {
+    const trimmed = body.trim();
+    if (!trimmed || posting) return;
+    setPosting(true);
+    try {
+      const res = await axios.post(`/api/tasks/${taskId}/comments`, {
+        body: trimmed,
+      });
+      setComments((prev) => [res.data.comment, ...prev]);
+      setBody("");
+    } catch {
+      toast.error("Failed to post comment");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div>
+      <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        Comments
+        <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+          {comments.length}
+        </span>
+      </h4>
+
+      {/* New comment input */}
+      <div className="mb-4">
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Write a comment for the team…"
+          className="min-h-[64px] resize-none text-sm"
+          disabled={posting}
+          onKeyDown={(e) => {
+            // Ctrl/Cmd + Enter posts
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+        />
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-[11px] text-muted-foreground">
+            Visible to everyone on the team. Ctrl+Enter to post.
+          </p>
+          <Button
+            size="sm"
+            onClick={handleAdd}
+            disabled={!body.trim() || posting}
+            className="gap-1.5"
+          >
+            <Send className="h-3.5 w-3.5" />
+            {posting ? "Posting…" : "Add comment"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Comment list */}
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : comments.length === 0 ? (
+        <p className="py-4 text-center text-xs text-muted-foreground">
+          No comments yet. Be the first to share something with the team.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {comments.map((c) => (
+            <li key={c.id} className="flex gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-50 dark:bg-brand-950/40 text-[11px] font-semibold text-brand-700 dark:text-brand-300">
+                {getInitials(c.author.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-sm font-semibold text-foreground">
+                    {c.author.name}
+                  </p>
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {c.author.role}
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    {timeAgo(c.createdAt)}
+                  </p>
+                </div>
+                <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
+                  {c.body}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -356,13 +501,13 @@ function TaskDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         {/* Sticky header */}
         <div className="flex items-start justify-between p-6 pb-0 shrink-0">
           <h2 className="text-lg font-bold pr-4">{task.title}</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-muted rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -379,10 +524,10 @@ function TaskDetailModal({
           {/* Description */}
           {task.description && (
             <div className="mb-4">
-              <p className="text-sm text-gray-500 font-medium mb-1">
+              <p className="text-sm text-muted-foreground font-medium mb-1">
                 Description
               </p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              <p className="text-sm text-foreground/80 whitespace-pre-wrap">
                 {task.description}
               </p>
             </div>
@@ -391,7 +536,7 @@ function TaskDetailModal({
           {/* Info grid */}
           <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
             <div>
-              <span className="text-gray-500">Priority</span>
+              <span className="text-muted-foreground">Priority</span>
               <div className="mt-0.5">
                 <Badge
                   variant="outline"
@@ -404,36 +549,36 @@ function TaskDetailModal({
               </div>
             </div>
             <div>
-              <span className="text-gray-500">Deadline</span>
+              <span className="text-muted-foreground">Deadline</span>
               <p
-                className={`mt-0.5 font-medium ${isOverdue && task.status !== "COMPLETED" ? "text-red-600" : ""}`}
+                className={`mt-0.5 font-medium ${isOverdue && task.status !== "COMPLETED" ? "text-red-600 dark:text-red-400" : ""}`}
               >
                 {deadlineText}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">Assigned to</span>
+              <span className="text-muted-foreground">Assigned to</span>
               <p className="mt-0.5">
                 {task.status === "REVIEW" && !task.assignedTo
-                  ? <span className="text-amber-600 font-medium">Needs Reviewer</span>
+                  ? <span className="text-amber-600 dark:text-amber-400 font-medium">Needs Reviewer</span>
                   : task.status === "REVIEW" && task.assignedTo
-                    ? <span className="text-teal-700 font-medium">Reviewing: {task.assignedTo.name}</span>
+                    ? <span className="text-teal-700 dark:text-teal-300 font-medium">Reviewing: {task.assignedTo.name}</span>
                     : task.assignedTo?.name || "Unassigned"}
               </p>
             </div>
             <div>
-              <span className="text-gray-500">Created by</span>
+              <span className="text-muted-foreground">Created by</span>
               <p className="mt-0.5">{task.createdBy.name}</p>
             </div>
             {task.client && (
               <div>
-                <span className="text-gray-500">Client</span>
+                <span className="text-muted-foreground">Client</span>
                 <p className="mt-0.5">{task.client.companyName}</p>
               </div>
             )}
             {task.department && (
               <div>
-                <span className="text-gray-500">Department</span>
+                <span className="text-muted-foreground">Department</span>
                 <p className="mt-0.5">{task.department.replace("_", " ")}</p>
               </div>
             )}
@@ -446,7 +591,7 @@ function TaskDetailModal({
               <div className="flex flex-wrap gap-2">
                 {task.attachments.map((att: any) => (
                   <a key={att.id} href={`/api/attachments/${att.id}`} target="_blank"
-                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border rounded-lg text-xs hover:bg-gray-100 transition-colors">
+                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 border rounded-lg text-xs hover:bg-muted transition-colors">
                     <Paperclip className="h-3 w-3" />
                     <span className="max-w-[150px] truncate">{att.fileName}</span>
                   </a>
@@ -475,8 +620,8 @@ function TaskDetailModal({
 
           {/* Reviewer Assignment */}
           {canAssignReviewer && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <label className="text-sm font-medium text-amber-800 mb-2 block">
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950/30 dark:border-amber-800/50">
+              <label className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2 block">
                 Assign Reviewer
               </label>
               <select
@@ -490,7 +635,7 @@ function TaskDetailModal({
                   }
                 }}
                 disabled={reviewerLoading}
-                className="w-full rounded-md border border-amber-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent bg-white"
+                className="w-full rounded-md border border-amber-300 dark:border-amber-800/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-card"
               >
                 <option value="">Select a reviewer...</option>
                 {teamMembers.map((tm) => (
@@ -499,7 +644,7 @@ function TaskDetailModal({
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-amber-600 mt-1">
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
                 Only Senior, Associate, or Manager can review tasks
               </p>
             </div>
@@ -511,7 +656,7 @@ function TaskDetailModal({
           <div className="flex flex-wrap gap-2">
             {finalNextStatus && (
               <Button
-                className="bg-[#00968a] hover:bg-[#007a70] text-white"
+                className="bg-brand-600 hover:bg-brand-700 text-white"
                 onClick={() => onStatusChange(task.id, finalNextStatus)}
               >
                 <ArrowRight className="w-4 h-4 mr-1" />
@@ -521,7 +666,7 @@ function TaskDetailModal({
             {canSendBack && (
               <Button
                 variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800/60 dark:text-amber-300 dark:hover:bg-amber-950/40"
                 onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
@@ -531,7 +676,7 @@ function TaskDetailModal({
             {canReset && (
               <Button
                 variant="outline"
-                className="text-gray-500"
+                className="text-muted-foreground"
                 onClick={() => onStatusChange(task.id, "TODO")}
               >
                 <RotateCcw className="w-4 h-4 mr-1" />
@@ -539,6 +684,11 @@ function TaskDetailModal({
               </Button>
             )}
           </div>
+
+          <Separator className="my-4" />
+
+          {/* Comments — Trello-style, visible to the whole team */}
+          <CommentsSection taskId={task.id} />
         </div>
       </div>
     </div>
@@ -623,13 +773,13 @@ function NewTaskForm({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-6 pb-0 shrink-0">
           <h2 className="text-lg font-bold">New Task</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-muted rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -638,7 +788,7 @@ function NewTaskForm({
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Title *
               </label>
               <Input
@@ -650,7 +800,7 @@ function NewTaskForm({
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Description
               </label>
               <Textarea
@@ -663,13 +813,13 @@ function NewTaskForm({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
                   Priority
                 </label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 >
                   <option value="LOW">Low</option>
                   <option value="MEDIUM">Medium</option>
@@ -679,7 +829,7 @@ function NewTaskForm({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                <label className="text-sm font-medium text-foreground/80 mb-1 block">
                   Deadline
                 </label>
                 <Input
@@ -692,13 +842,13 @@ function NewTaskForm({
 
             {/* Assign to dropdown */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Assign to
               </label>
               <select
                 value={assignToId}
                 onChange={(e) => setAssignToId(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00968a] focus:border-transparent"
+                className="w-full rounded-md border border-border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               >
                 <option value="">Unassigned (anyone can pick up)</option>
                 {teamMembers.map((tm) => (
@@ -711,7 +861,7 @@ function NewTaskForm({
 
             {/* File attachments */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-foreground/80 mb-1 block">
                 Attachments
               </label>
               <input
@@ -734,18 +884,18 @@ function NewTaskForm({
                   : "Attach Files"}
               </Button>
               {taskAttachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3 p-3 bg-gray-50 rounded-lg border">
+                <div className="flex flex-wrap gap-2 mt-3 p-3 bg-muted/50 rounded-lg border">
                   {taskAttachments.map((file, idx) => (
                     <div
                       key={idx}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border rounded-lg text-xs shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-card border rounded-lg text-xs shadow-sm"
                     >
-                      <Paperclip className="h-3.5 w-3.5 text-[#00968a]" />
+                      <Paperclip className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
                       <span className="max-w-[180px] truncate font-medium">{file.name}</span>
                       <button
                         type="button"
                         onClick={() => removeFile(idx)}
-                        className="ml-1 text-gray-400 hover:text-red-500"
+                        className="ml-1 text-muted-foreground hover:text-red-500"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -763,7 +913,7 @@ function NewTaskForm({
             <Button
               type="submit"
               disabled={submitting || !title.trim()}
-              className="bg-[#00968a] hover:bg-[#007a70] text-white"
+              className="bg-brand-600 hover:bg-brand-700 text-white"
             >
               {submitting ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1" />
@@ -904,8 +1054,8 @@ export default function HRTasksPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-[#00968a]" />
-        <span className="ml-2 text-gray-500">Loading tasks...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-brand-600 dark:text-brand-400" />
+        <span className="ml-2 text-muted-foreground">Loading tasks...</span>
       </div>
     );
   }
@@ -916,7 +1066,7 @@ export default function HRTasksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{deptDisplayName} Tasks</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Manage your work across the workflow
           </p>
         </div>
@@ -947,7 +1097,7 @@ export default function HRTasksPage() {
           )}
           {canCreateTasks && (
             <Button
-              className="bg-[#00968a] hover:bg-[#007a70] text-white"
+              className="bg-brand-600 hover:bg-brand-700 text-white"
               onClick={() => setShowNewForm(true)}
             >
               <Plus className="w-4 h-4 mr-1" />
@@ -959,23 +1109,23 @@ export default function HRTasksPage() {
 
       {/* Stats */}
       <div className="flex flex-wrap gap-2">
-        <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+        <Badge className="bg-muted text-foreground/80 hover:bg-muted dark:bg-muted dark:text-foreground/80">
           To Do: {counts.todo}
         </Badge>
-        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-900/40">
           In Progress: {counts.inProgress}
         </Badge>
-        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+        <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/40">
           Review: {counts.review}
         </Badge>
-        <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100">
+        <Badge className="bg-teal-100 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/40 dark:text-teal-300 dark:hover:bg-teal-900/40">
           Approved: {counts.approved}
         </Badge>
-        <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/40">
           Completed: {counts.completed}
         </Badge>
         {counts.overdue > 0 && (
-          <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/40">
             <AlertTriangle className="w-3 h-3 mr-1" />
             Overdue: {counts.overdue}
           </Badge>
@@ -984,7 +1134,7 @@ export default function HRTasksPage() {
 
       {/* Search */}
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search tasks..."
           value={search}
@@ -1002,11 +1152,11 @@ export default function HRTasksPage() {
           return (
             <div
               key={status}
-              className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-gray-200`}
+              className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border`}
             >
               {/* Column header */}
               <div className="px-3 py-2 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">
+                <span className="text-sm font-semibold text-foreground/80">
                   {config.label}
                 </span>
                 <Badge
@@ -1027,7 +1177,7 @@ export default function HRTasksPage() {
                   />
                 ))}
                 {statusTasks.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-6">
+                  <p className="text-xs text-muted-foreground text-center py-6">
                     No tasks
                   </p>
                 )}

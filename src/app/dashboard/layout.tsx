@@ -12,10 +12,10 @@ export default function DashboardLayout({
       <AppSidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar with notification bell */}
-        <header className="flex h-12 shrink-0 items-center justify-end border-b bg-white px-6">
+        <header className="flex h-12 shrink-0 items-center justify-end border-b border-border bg-card px-6">
           <NotificationBell />
         </header>
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-muted/50 dark:bg-background p-6">
           {children}
         </main>
       </div>

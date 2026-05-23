@@ -17,7 +17,7 @@ import {
   Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NotificationBell } from "@/components/notification-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface NavItem {
   label: string;
@@ -101,6 +101,20 @@ const navItems: NavItem[] = [
   },
 ];
 
+// Pale per-role wash applied to the whole sidebar so each role has a visible
+// identity in both light and dark modes.
+const SIDEBAR_BG_BY_ROLE: Record<string, string> = {
+  ADMIN:     "bg-slate-50 dark:bg-slate-950",
+  PARTNER:   "bg-indigo-50 dark:bg-indigo-950",
+  MANAGER:   "bg-blue-50 dark:bg-blue-950",
+  SENIOR:    "bg-emerald-50 dark:bg-emerald-950",
+  ASSOCIATE: "bg-cyan-50 dark:bg-cyan-950",
+  JUNIOR:    "bg-amber-50 dark:bg-amber-950",
+  ASSISTANT: "bg-orange-50 dark:bg-orange-950",
+  INTERN:    "bg-pink-50 dark:bg-pink-950",
+  CLIENT:    "bg-brand-50 dark:bg-brand-950",
+};
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -110,14 +124,21 @@ export function AppSidebar() {
     (item) => !item.roles || (userRole && item.roles.includes(userRole))
   );
 
+  const sidebarBg = SIDEBAR_BG_BY_ROLE[userRole || ""] ?? "bg-card";
+
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-white">
+    <aside
+      className={cn(
+        "flex h-full w-64 flex-col border-r border-border",
+        sidebarBg
+      )}
+    >
       {/* Brand */}
-      <div className="flex h-16 items-center gap-3 border-b px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#00968a]">
+      <div className="flex h-16 items-center gap-3 border-b border-border px-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-600">
           <span className="text-sm font-bold text-white">K</span>
         </div>
-        <span className="text-lg font-semibold">Kreston CRM</span>
+        <span className="text-lg font-semibold text-foreground">Kreston CRM</span>
       </div>
 
       {/* Navigation */}
@@ -133,14 +154,16 @@ export function AppSidebar() {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[#00968a]/10 text-[#00968a]"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  ? "bg-brand-100/70 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
               <item.icon
                 className={cn(
                   "h-4 w-4",
-                  isActive ? "text-[#00968a]" : "text-gray-400"
+                  isActive
+                    ? "text-brand-600 dark:text-brand-400"
+                    : "text-muted-foreground"
                 )}
               />
               {item.label}
@@ -150,24 +173,25 @@ export function AppSidebar() {
       </nav>
 
       {/* User section */}
-      <div className="border-t p-4">
+      <div className="border-t border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00968a]/10">
-            <span className="text-xs font-medium text-[#00968a]">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-900/50">
+            <span className="text-xs font-medium text-brand-700 dark:text-brand-300">
               {session?.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium">
+            <p className="truncate text-sm font-medium text-foreground">
               {session?.user?.name ?? "User"}
             </p>
-            <p className="truncate text-xs text-gray-500">
+            <p className="truncate text-xs text-muted-foreground">
               {session?.user?.role ?? ""}
             </p>
           </div>
+          <ThemeToggle />
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />

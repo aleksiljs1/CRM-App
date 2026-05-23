@@ -88,7 +88,7 @@ function getFileIcon(mimeType: string) {
     return <FileText className="h-3.5 w-3.5 text-blue-500" />;
   if (mimeType.includes("excel") || mimeType.includes("spreadsheet"))
     return <FileText className="h-3.5 w-3.5 text-green-500" />;
-  return <FileText className="h-3.5 w-3.5 text-gray-500" />;
+  return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
 function formatFileSize(bytes: number): string {
@@ -136,7 +136,7 @@ function ThreadSkeleton() {
         <div
           key={i}
           className={`animate-pulse rounded-xl p-4 ${
-            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-[#00968a]/20"
+            i % 2 === 0 ? "mr-16 bg-muted/60" : "ml-16 bg-brand-200/60 dark:bg-brand-800/40"
           }`}
         >
           <div className="mb-2 h-3 w-24 rounded bg-muted-foreground/20" />
@@ -356,8 +356,8 @@ export default function HREmailsPage() {
       {/* ------ Header ------ */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00968a]/10">
-            <Mail className="h-5 w-5 text-[#00968a]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100/70 dark:bg-brand-900/40">
+            <Mail className="h-5 w-5 text-brand-600 dark:text-brand-400" />
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{deptDisplayName} Emails</h1>
@@ -377,7 +377,7 @@ export default function HREmailsPage() {
           {prioritizing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Sparkles className="h-4 w-4 text-[#00968a]" />
+            <Sparkles className="h-4 w-4 text-brand-600 dark:text-brand-400" />
           )}
           {prioritizing ? "Analyzing..." : "Sort by Importance"}
         </Button>
@@ -412,7 +412,7 @@ export default function HREmailsPage() {
             value={searchInput}
             onChange={(e) => handleSearchInput(e.target.value)}
             placeholder="Search emails..."
-            className="h-9 w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+            className="h-9 w-64 rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
         </div>
       </div>
@@ -447,7 +447,7 @@ export default function HREmailsPage() {
                       onClick={() => setSelectedId(email.id)}
                       className={`group relative w-full border-b px-4 py-3.5 text-left transition-colors last:border-b-0 ${
                         isSelected
-                          ? "bg-[#00968a]/8 border-l-2 border-l-[#00968a]"
+                          ? "bg-brand-100/70 dark:bg-brand-900/30 border-l-2 border-l-brand-500"
                           : "hover:bg-muted/50 border-l-2 border-l-transparent"
                       }`}
                     >
@@ -489,7 +489,7 @@ export default function HREmailsPage() {
                                 ? "bg-emerald-500"
                                 : isUnread
                                 ? "bg-red-400"
-                                : "bg-gray-300"
+                                : "bg-muted-foreground/40"
                             }`}
                             title={
                               email.isReplied
@@ -503,8 +503,8 @@ export default function HREmailsPage() {
                             <span
                               className={`rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight ${
                                 importance > 70
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-amber-100 text-amber-700"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                  : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
                               }`}
                             >
                               {importance > 70 ? "Urgent" : "Important"}
@@ -582,8 +582,8 @@ export default function HREmailsPage() {
                           <span
                             className={`inline-flex items-center gap-1 text-xs font-medium ${
                               selectedEmail.aiImportance > 70
-                                ? "text-red-600"
-                                : "text-amber-600"
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-amber-600 dark:text-amber-400"
                             }`}
                           >
                             <ArrowUpDown className="h-3 w-3" />
@@ -617,7 +617,7 @@ export default function HREmailsPage() {
                           <div
                             className={`max-w-[75%] rounded-2xl px-5 py-3.5 ${
                               isOutgoing
-                                ? "rounded-br-md bg-[#00968a] text-white"
+                                ? "rounded-br-md bg-brand-600 text-white"
                                 : "rounded-bl-md bg-muted"
                             }`}
                           >
@@ -653,7 +653,7 @@ export default function HREmailsPage() {
                                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs transition-colors ${
                                         isOutgoing
                                           ? "bg-white/20 border-white/30 text-white hover:bg-white/30"
-                                          : "bg-white/80 border-gray-200 hover:bg-gray-50"
+                                          : "bg-card/80 border-border hover:bg-muted"
                                       }`}
                                     >
                                       {getFileIcon(att.mimeType)}
@@ -664,7 +664,7 @@ export default function HREmailsPage() {
                                         className={
                                           isOutgoing
                                             ? "text-white/50"
-                                            : "text-gray-400"
+                                            : "text-muted-foreground"
                                         }
                                       >
                                         ({formatFileSize(att.fileSize)})
@@ -689,7 +689,7 @@ export default function HREmailsPage() {
                   placeholder="Write your reply..."
                   rows={3}
                   rows={5}
-                  className="w-full resize-y min-h-[120px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-[#00968a]/30 focus:border-[#00968a]"
+                  className="w-full resize-y min-h-[120px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       handleReply();
@@ -701,7 +701,7 @@ export default function HREmailsPage() {
                     {attachments.map((file, i) => (
                       <div
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded text-xs"
+                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-muted rounded text-xs"
                       >
                         <Paperclip className="h-3 w-3" />
                         <span className="max-w-[120px] truncate">
@@ -713,7 +713,7 @@ export default function HREmailsPage() {
                               prev.filter((_, idx) => idx !== i)
                             )
                           }
-                          className="text-gray-400 hover:text-red-500 ml-1"
+                          className="text-muted-foreground hover:text-red-500 ml-1"
                         >
                           ×
                         </button>
@@ -752,7 +752,7 @@ export default function HREmailsPage() {
                       onClick={handleEnhance}
                       disabled={enhancing || !replyText.trim()}
                       variant="outline"
-                      className="gap-2 rounded-xl text-sm border-[#00968a] text-[#00968a] hover:bg-[#00968a]/10"
+                      className="gap-2 rounded-xl text-sm border-brand-500 text-brand-600 dark:text-brand-400 hover:bg-brand-100/70 dark:hover:bg-brand-900/40"
                     >
                       {enhancing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -764,7 +764,7 @@ export default function HREmailsPage() {
                     <Button
                       onClick={handleReply}
                       disabled={sendingReply || !replyText.trim()}
-                      className="gap-2 rounded-xl bg-[#00968a] px-5 py-3 text-white hover:bg-[#007d73]"
+                      className="gap-2 rounded-xl bg-brand-600 px-5 py-3 text-white hover:bg-brand-700"
                     >
                       {sendingReply ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
