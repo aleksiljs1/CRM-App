@@ -148,8 +148,7 @@ export async function POST(request: NextRequest) {
         const buffer = await import("node:fs/promises").then(fs => fs.readFile(fullPath));
         if (doc.fileName.toLowerCase().endsWith(".pdf")) {
           const { PDFParse } = await import("pdf-parse");
-          const pdf = new PDFParse(new Uint8Array(buffer));
-          await pdf.load();
+          const pdf = new PDFParse({ data: new Uint8Array(buffer) });
           const result = await pdf.getText();
           firstPageText = ((result as any).pages?.[0]?.text || "").slice(0, 500);
           pdf.destroy();

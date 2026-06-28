@@ -37,8 +37,7 @@ async function extractText(filePath: string, mimeType: string): Promise<string> 
   console.log("[DOC-ASK] File size:", buffer.length);
 
   if (mimeType === "application/pdf") {
-    const pdf = new PDFParse(new Uint8Array(buffer));
-    await pdf.load();
+    const pdf = new PDFParse({ data: new Uint8Array(buffer) });
     const result = await pdf.getText();
     const text = (result as any).pages?.map((p: any) => p.text || "").join("\n") || "";
     pdf.destroy();

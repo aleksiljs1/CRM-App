@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: kreston-crm
+    runtime: node
+    plan: free
+    branch: master
+    # --include=dev is required: Render sets NODE_ENV=production, which would
+    # otherwise make npm skip devDependencies (typescript, tailwind, etc.) and
+    # the build would fail.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    startCommand: npx tsx server.ts
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set the rest in the Render dashboard (Environment tab). sync:false means
+      # Render will prompt you for the value instead of reading it from this file,
+      # so no secrets are committed to git.
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: AUTO_ASSIGN_HOURS
+        value: "24"
