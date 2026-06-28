@@ -61,6 +61,26 @@ npm run db:seed           # loads demo users + data
 Visit the URL and log in with a seeded account (see `prisma/seed.ts` for
 credentials).
 
+## 6. Keep it awake (kill the cold-start) — free
+
+The free Render service sleeps after ~15 min idle, so the first visit after a
+quiet period takes ~40s to wake. A free uptime pinger that hits the URL every
+~10 min keeps it awake the whole 3 days — no cold starts.
+
+**Option A — UptimeRobot (easiest):**
+1. Go to https://uptimerobot.com → sign up (free).
+2. **Add New Monitor** → Type: **HTTP(s)** → URL: your Render URL
+   (e.g. `https://kreston-crm.onrender.com`) → Monitoring interval: **5 minutes**.
+3. Save. Done — it now pings your app continuously.
+
+**Option B — cron-job.org:**
+1. Go to https://cron-job.org → sign up (free).
+2. **Create cronjob** → URL: your Render URL → Schedule: **every 10 minutes**.
+3. Save.
+
+> Turn the pinger off after your demo so you're not keeping the free instance
+> awake forever (Render free has a monthly hour budget).
+
 ---
 
 ## Making code changes during the 3 days
@@ -80,9 +100,9 @@ DB matches.
 
 ## Things to know
 
-- **Cold start:** the free Render service sleeps after ~15 min of no traffic.
-  The next visit takes ~40s to wake. Open the URL a minute before your demo to
-  warm it up. While asleep, the email poller is paused (resumes on wake).
+- **Cold start:** the free Render service sleeps after ~15 min of no traffic
+  (next visit takes ~40s to wake; the email poller pauses while asleep). Set up
+  the keep-alive pinger in **step 6** to eliminate this for the demo window.
 - **Gemini:** works in the live demo as long as `GEMINI_API_KEY` is set in
   Render (step 3).
 - **Secrets:** your local `.env` is gitignored and is NOT on GitHub. Secrets
