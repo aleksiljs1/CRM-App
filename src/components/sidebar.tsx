@@ -71,6 +71,12 @@ const navItems: NavItem[] = [
     roles: ["PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
+    label: "Client Documents",
+    href: "/dashboard/workspace/submissions",
+    icon: FolderOpen,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
+  },
+  {
     label: "Chats",
     href: "/dashboard/workspace/chats",
     icon: MessageSquare,

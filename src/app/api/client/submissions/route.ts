@@ -272,7 +272,7 @@ Return ONLY a JSON array:
         title: complete ? "Client Documents Complete" : "Client Uploaded Documents",
         message: notifMessage,
         type: "DOCUMENT",
-        link: "/dashboard/hr/documents",
+        link: "/dashboard/workspace/submissions",
       });
     }
 
