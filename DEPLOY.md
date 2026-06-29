@@ -30,8 +30,8 @@ npm run db:seed           # loads demo users + data
 
 1. Go to https://render.com → sign up → connect your GitHub.
 2. **New → Web Service** → pick the `aleksiljs1/CRM-App` repo.
-3. Render auto-detects `render.yaml`. Set **Root Directory** to `kreston-crm`
-   (the app is in a subfolder of the repo).
+3. Render auto-detects `render.yaml`. **Leave "Root Directory" blank** — the
+   repo root IS the app (`package.json`/`render.yaml` are at the top level).
 4. Plan: **Free**.
 5. When prompted, fill in the environment variables (values from your local
    `.env`, except the two marked):
