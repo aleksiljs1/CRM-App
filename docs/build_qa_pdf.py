@@ -94,6 +94,7 @@ TOC = """# Contents
 7. Clients, Processes & Templates
 8. Client Portal
 9. Performance, Notifications & Export
+10. Latest Updates — Targeted Tests
 
 Appendix: Known Limitations & Tester Notes
 """
