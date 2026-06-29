@@ -49,13 +49,13 @@ export async function POST() {
 You are given ${emails.length} unread emails. Your job is to ORDER them from MOST URGENT to LEAST URGENT.
 
 Consider:
+- Registered clients: emails from one of the firm's REGISTERED CLIENTS should be prioritised ABOVE non-client emails when urgency is otherwise similar. These are paying clients and must not wait.
 - Keywords: urgent, deadline, error, asap, overdue, correction, legal, compliance, tax deadline
 - Time elapsed since received (older = more urgent, they've been waiting longer)
 - Business impact (payroll errors > general questions)
-- Client importance
 
 Emails:
-${emails.map((e) => `ID: ${e.id} | From: ${e.senderName} | Subject: ${e.subject} | Received: ${e.createdAt} | Body: ${e.body.slice(0, 200)}`).join("\n")}
+${emails.map((e) => `ID: ${e.id} | From: ${e.senderName}${e.client ? ` | REGISTERED CLIENT: ${e.client.companyName}` : " | (not a registered client)"} | Subject: ${e.subject} | Received: ${e.createdAt} | Body: ${e.body.slice(0, 200)}`).join("\n")}
 
 Return ONLY a JSON array of email IDs in order from most urgent to least urgent. Nothing else:
 ["id1", "id2", "id3"]`;
