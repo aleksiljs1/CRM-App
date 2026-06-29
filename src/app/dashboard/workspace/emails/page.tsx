@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import {
   Plus,
   X,
   Download,
+  AlertTriangle,
 } from "lucide-react";
 import { exportToExcel } from "@/lib/export";
 
@@ -164,6 +166,11 @@ export default function HREmailsPage() {
   const dept = session?.user?.department || null;
   const deptDisplayName = getDeptName(dept);
 
+  // null = still checking, true/false = whether this user linked a mailbox.
+  const [emailConnected, setEmailConnected] = useState<boolean | null>(null);
+  const isAdminView =
+    session?.user?.role === "ADMIN" || session?.user?.role === "PARTNER";
+
   const [emails, setEmails] = useState<Email[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -247,8 +254,26 @@ export default function HREmailsPage() {
     }, 400);
   };
 
-  // ---- Poll Gmail for new emails every 10 seconds ----
+  // ---- Check whether this user has connected a mailbox ----
   useEffect(() => {
+    let cancelled = false;
+    axios
+      .get("/api/settings/email")
+      .then(({ data }) => {
+        if (!cancelled) setEmailConnected(!!data.connected);
+      })
+      .catch(() => {
+        if (!cancelled) setEmailConnected(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ---- Poll the connected mailbox every 10 seconds ----
+  // Admins/partners see all emails without needing their own connection.
+  useEffect(() => {
+    if (!emailConnected && !isAdminView) return; // nothing to poll yet
     const poll = async () => {
       try {
         const { data } = await axios.post("/api/emails/poll");
@@ -263,7 +288,7 @@ export default function HREmailsPage() {
     poll();
     const interval = setInterval(poll, 10000);
     return () => clearInterval(interval);
-  }, [fetchEmails, pagination.page]);
+  }, [fetchEmails, pagination.page, emailConnected, isAdminView]);
 
   // ---- Fetch thread when selection changes ----
   useEffect(() => {
@@ -404,7 +429,7 @@ export default function HREmailsPage() {
             Emails
           </h1>
           <p className="mt-0.5 text-[13px] text-muted-foreground">
-            {deptDisplayName} inbox
+            {isAdminView ? `${deptDisplayName} inbox` : "Your inbox"}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
@@ -434,6 +459,29 @@ export default function HREmailsPage() {
           </Button>
         </div>
       </div>
+
+      {/* ------ Not-connected warning ------ */}
+      {emailConnected === false && !isAdminView && (
+        <div className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700/60 dark:bg-amber-950/40 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                You don&apos;t have an email connected
+              </p>
+              <p className="text-[13px] text-amber-800/80 dark:text-amber-300/80">
+                Go to Settings and add your email to see your inbox here.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/settings/email"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+          >
+            Go to Settings
+          </Link>
+        </div>
+      )}
 
       {/* ------ Filter tabs + Search + AI prioritize ------ */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

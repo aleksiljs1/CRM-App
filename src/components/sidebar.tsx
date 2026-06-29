@@ -83,6 +83,12 @@ const navItems: NavItem[] = [
     roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
+    label: "Email Settings",
+    href: "/dashboard/settings/email",
+    icon: Settings,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
+  },
+  {
     label: "Clients",
     href: "/dashboard/clients",
     icon: Users,

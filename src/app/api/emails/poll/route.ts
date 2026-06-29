@@ -15,21 +15,35 @@ export async function POST() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const newEmails = await fetchNewEmails();
+    // Poll the logged-in user's OWN mailbox (connected via Settings -> Email).
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { imapEmail: true, imapPassword: true, emailConnected: true },
+    });
+
+    if (!me?.emailConnected || !me.imapEmail || !me.imapPassword) {
+      return Response.json({ notConnected: true, fetched: 0, emails: [] });
+    }
+
+    const newEmails = await fetchNewEmails({
+      user: me.imapEmail,
+      password: me.imapPassword,
+    });
 
     if (!newEmails || newEmails.length === 0) {
       return Response.json({ fetched: 0, emails: [] });
     }
 
-    // Save each new email to the database
+    // Save each new email to the database, owned by this user.
     const saved = [];
     for (const emailData of newEmails) {
-      // Check if we already have this email (by sender + subject + close timestamp)
+      // Dedup within THIS user's inbox (by sender + subject + body start).
       const existing = await prisma.email.findFirst({
         where: {
+          userId: session.user.id,
           senderEmail: emailData.senderEmail,
           subject: emailData.subject,
-          body: emailData.body.slice(0, 200), // rough dedup
+          body: emailData.body.slice(0, 200),
         },
       });
 
@@ -52,31 +66,25 @@ export async function POST() {
           isRead: false,
           isReplied: false,
           clientId: client?.id || null,
+          userId: session.user.id,
         },
       });
 
       saved.push(email);
 
-      // Notify users in the MATCHING department (not just HR)
-      const deptUsers = await prisma.user.findMany({
-        where: { department: emailData.recipientDept as any, isActive: true },
-        select: { id: true },
+      // Notify the inbox owner only.
+      await prisma.notification.create({
+        data: {
+          userId: session.user.id,
+          title: "New Email",
+          message: `From ${emailData.senderName}: ${emailData.subject}`,
+          type: "EMAIL" as const,
+          link: "/dashboard/workspace/emails",
+        },
       });
 
-      if (deptUsers.length > 0) {
-        await prisma.notification.createMany({
-          data: deptUsers.map((u) => ({
-            userId: u.id,
-            title: "New Email",
-            message: `From ${emailData.senderName}: ${emailData.subject}`,
-            type: "EMAIL" as const,
-            link: "/dashboard/workspace/emails",
-          })),
-        });
-      }
-
       console.log(
-        `[POLL] Saved email from ${emailData.senderEmail}: "${emailData.subject}" -> ${emailData.recipientDept}`
+        `[POLL] Saved email for ${me.imapEmail} from ${emailData.senderEmail}: "${emailData.subject}"`
       );
     }
 

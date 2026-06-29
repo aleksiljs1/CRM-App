@@ -11,17 +11,26 @@ import crypto from "crypto";
 let isPolling = false;
 let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-const IMAP_CONFIG = {
-  imap: {
-    user: process.env.SMTP_USER || "",
-    password: process.env.SMTP_PASS || "",
-    host: "imap.gmail.com",
-    port: 993,
-    tls: true,
-    authTimeout: 10000,
-    tlsOptions: { rejectUnauthorized: false },
-  },
-};
+/** Credentials for a single mailbox to poll. */
+export interface ImapCredentials {
+  user: string;
+  password: string;
+  host?: string;
+}
+
+function buildImapConfig(creds: ImapCredentials) {
+  return {
+    imap: {
+      user: creds.user,
+      password: creds.password,
+      host: creds.host || "imap.gmail.com",
+      port: 993,
+      tls: true,
+      authTimeout: 10000,
+      tlsOptions: { rejectUnauthorized: false },
+    },
+  };
+}
 
 /**
  * Detect department from email subject and body using keyword matching.
@@ -38,12 +47,19 @@ function detectDepartment(subject: string, body: string): string {
   return "HR"; // default fallback
 }
 
-async function fetchNewEmails() {
-  if (isPolling) return; // prevent overlapping polls
+async function fetchNewEmails(creds?: ImapCredentials) {
+  // Fall back to the global env mailbox if no per-user creds are given.
+  const resolved: ImapCredentials = creds || {
+    user: process.env.SMTP_USER || "",
+    password: process.env.SMTP_PASS || "",
+  };
+  if (!resolved.user || !resolved.password) return [];
+
+  if (isPolling) return []; // prevent overlapping polls
   isPolling = true;
 
   try {
-    const connection = await imapSimple.connect(IMAP_CONFIG);
+    const connection = await imapSimple.connect(buildImapConfig(resolved));
     await connection.openBox("INBOX");
 
     // Search for UNSEEN (unread) emails
@@ -108,7 +124,23 @@ async function fetchNewEmails() {
   }
 }
 
-export { fetchNewEmails, detectDepartment };
+/**
+ * Test that a mailbox's IMAP credentials actually work.
+ * Used by Settings -> Email before saving so users get instant feedback.
+ */
+async function verifyImapConnection(creds: ImapCredentials): Promise<boolean> {
+  try {
+    const connection = await imapSimple.connect(buildImapConfig(creds));
+    await connection.openBox("INBOX");
+    connection.end();
+    return true;
+  } catch (error) {
+    console.error("[IMAP] Verify failed:", error);
+    return false;
+  }
+}
+
+export { fetchNewEmails, detectDepartment, verifyImapConnection };
 
 export function startPolling() {
   if (pollInterval) return; // already running

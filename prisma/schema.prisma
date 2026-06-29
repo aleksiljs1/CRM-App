@@ -80,6 +80,10 @@ model User {
   department Department?
   avatar     String?
   isActive   Boolean    @default(true)
+  // Per-user email (IMAP) connection, set via Settings -> Email.
+  emailConnected Boolean @default(false)
+  imapEmail      String?
+  imapPassword   String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 

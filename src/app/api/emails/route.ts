@@ -25,12 +25,10 @@ export async function GET(request: NextRequest) {
 
     const where: any = {};
 
-    // ADMIN and PARTNER (department=null) see ALL emails; others see only their department
-    if (department && role !== "ADMIN" && role !== "PARTNER") {
-      where.recipientDept = department;
-    } else if (!department && role !== "ADMIN" && role !== "PARTNER") {
-      // Fallback for non-admin users without a department
-      where.recipientDept = "HR";
+    // ADMIN and PARTNER see ALL emails; everyone else sees only their own
+    // connected inbox (emails polled from the mailbox they linked in Settings).
+    if (role !== "ADMIN" && role !== "PARTNER") {
+      where.userId = session.user.id;
     }
 
     if (filter === "unread") {
