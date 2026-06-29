@@ -4,8 +4,10 @@ import next from "next";
 import { Server as SocketIOServer } from "socket.io";
 
 const dev = process.env.NODE_ENV !== "production";
-// In production (e.g. Render) bind to all interfaces so the platform can route to us.
-const hostname = process.env.HOSTNAME || (dev ? "localhost" : "0.0.0.0");
+// In production (e.g. Render) bind to all interfaces so the platform can route to
+// us. NOTE: do NOT read process.env.HOSTNAME — Render sets it to the container's
+// internal name, which binds to a single interface and breaks port detection.
+const hostname = dev ? "localhost" : "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000");
 
 const app = next({ dev, hostname, port });
