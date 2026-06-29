@@ -18,6 +18,27 @@ export interface ImapCredentials {
   host?: string;
 }
 
+/**
+ * Guess the IMAP server from an email address. Returns null for unknown
+ * domains so the caller can ask the user for a custom host.
+ */
+export function detectImapHost(email: string): string | null {
+  const domain = (email.split("@")[1] || "").toLowerCase();
+  if (!domain) return null;
+  if (domain === "gmail.com" || domain === "googlemail.com")
+    return "imap.gmail.com";
+  if (
+    domain === "outlook.com" ||
+    domain === "hotmail.com" ||
+    domain === "live.com" ||
+    domain === "msn.com"
+  )
+    return "outlook.office365.com";
+  if (domain.endsWith("yahoo.com")) return "imap.mail.yahoo.com";
+  if (domain === "icloud.com" || domain === "me.com") return "imap.mail.me.com";
+  return null;
+}
+
 function buildImapConfig(creds: ImapCredentials) {
   return {
     imap: {
@@ -62,23 +83,30 @@ async function fetchNewEmails(creds?: ImapCredentials) {
     const connection = await imapSimple.connect(buildImapConfig(resolved));
     await connection.openBox("INBOX");
 
-    // Search for UNSEEN (unread) emails
-    const searchCriteria = ["UNSEEN"];
+    // Pull recent inbox emails (read OR unread) so the user sees their existing
+    // mailbox, not just brand-new mail. Limited to the last 30 days and capped
+    // below. We do NOT mark messages as read — stay non-invasive.
+    // node-imap formats a Date object into the IMAP date format itself.
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const searchCriteria: any[] = [["SINCE", since]];
     const fetchOptions = {
       bodies: [""],
-      markSeen: true, // mark as read so we don't process again
+      markSeen: false,
       struct: true,
     };
 
-    const messages = await connection.search(searchCriteria, fetchOptions);
+    const allMessages = await connection.search(searchCriteria, fetchOptions);
 
-    if (messages.length === 0) {
+    if (allMessages.length === 0) {
       connection.end();
       isPolling = false;
       return [];
     }
 
-    console.log(`[IMAP] Found ${messages.length} new email(s)`);
+    // Newest first, capped so a big inbox doesn't overwhelm the poll.
+    const messages = allMessages.slice(-25).reverse();
+
+    console.log(`[IMAP] Fetched ${messages.length} recent email(s)`);
 
     const newEmails = [];
 
@@ -108,6 +136,7 @@ async function fetchNewEmails(creds?: ImapCredentials) {
           subject,
           body,
           recipientDept,
+          date: parsed.date || new Date(),
         });
       } catch (parseErr) {
         console.error("[IMAP] Failed to parse email:", parseErr);

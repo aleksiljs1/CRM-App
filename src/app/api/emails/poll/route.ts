@@ -18,7 +18,12 @@ export async function POST() {
     // Poll the logged-in user's OWN mailbox (connected via Settings -> Email).
     const me = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { imapEmail: true, imapPassword: true, emailConnected: true },
+      select: {
+        imapEmail: true,
+        imapPassword: true,
+        imapHost: true,
+        emailConnected: true,
+      },
     });
 
     if (!me?.emailConnected || !me.imapEmail || !me.imapPassword) {
@@ -28,6 +33,7 @@ export async function POST() {
     const newEmails = await fetchNewEmails({
       user: me.imapEmail,
       password: me.imapPassword,
+      host: me.imapHost || undefined,
     });
 
     if (!newEmails || newEmails.length === 0) {
@@ -67,6 +73,7 @@ export async function POST() {
           isReplied: false,
           clientId: client?.id || null,
           userId: session.user.id,
+          createdAt: emailData.date || undefined,
         },
       });
 

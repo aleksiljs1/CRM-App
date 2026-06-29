@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { verifyImapConnection } from "@/lib/email-poller";
+import { verifyImapConnection, detectImapHost } from "@/lib/email-poller";
 
 /**
  * GET  /api/settings/email  -> current user's email-connection status
@@ -53,13 +53,20 @@ export async function POST(request: Request) {
     );
   }
 
+  // Detect the IMAP server from the email domain (Gmail, Outlook, etc.).
+  const host = detectImapHost(email) || "imap.gmail.com";
+
   // Verify the credentials actually connect before saving.
-  const ok = await verifyImapConnection({ user: email, password: appPassword });
+  const ok = await verifyImapConnection({
+    user: email,
+    password: appPassword,
+    host,
+  });
   if (!ok) {
     return Response.json(
       {
         error:
-          "Could not connect. Check the email and make sure you used a Gmail App Password (not your normal password), with IMAP enabled.",
+          "Could not connect. Check the email and make sure you used a Gmail App Password (not your normal password), with IMAP enabled in Gmail settings.",
       },
       { status: 400 }
     );
@@ -70,6 +77,7 @@ export async function POST(request: Request) {
     data: {
       imapEmail: email,
       imapPassword: appPassword,
+      imapHost: host,
       emailConnected: true,
     },
   });
@@ -85,7 +93,12 @@ export async function DELETE() {
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { imapEmail: null, imapPassword: null, emailConnected: false },
+    data: {
+      imapEmail: null,
+      imapPassword: null,
+      imapHost: null,
+      emailConnected: false,
+    },
   });
 
   return Response.json({ connected: false });
