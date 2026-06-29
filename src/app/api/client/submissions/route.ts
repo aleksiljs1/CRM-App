@@ -34,7 +34,14 @@ export async function GET() {
           },
         },
         documents: {
-          include: {
+          select: {
+            id: true,
+            fileName: true,
+            filePath: true,
+            fileSize: true,
+            mimeType: true,
+            uploadedAt: true,
+            aiConfidence: true,
             aiMatchedTo: true,
           },
         },
@@ -124,36 +131,54 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Save files
-    const savedDocs: { fileName: string; filePath: string; fileSize: number }[] = [];
+    // Save files. We keep the bytes in memory (to store in the DB so files
+    // survive redeploys) and also write to disk best-effort for any in-request
+    // tooling. The DB copy is the source of truth for downloads.
+    const fsp = await import("node:fs/promises");
+    const docsDir = path.join(process.cwd(), "public", "documents");
+    try { await fsp.mkdir(docsDir, { recursive: true }); } catch {}
+
+    const savedDocs: {
+      fileName: string;
+      filePath: string;
+      fileSize: number;
+      mimeType: string;
+      buffer: Buffer;
+    }[] = [];
     for (const file of files) {
       const ext = path.extname(file.name);
       const uniqueName = `${crypto.randomUUID()}${ext}`;
-      const fullPath = path.join(process.cwd(), "public", "documents", uniqueName);
       const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(fullPath, buffer);
+      try { await writeFile(path.join(docsDir, uniqueName), buffer); } catch {}
       savedDocs.push({
         fileName: file.name,
         filePath: `/documents/${uniqueName}`,
         fileSize: buffer.length,
+        mimeType: file.type || "application/octet-stream",
+        buffer,
       });
     }
 
-    // Build file info with first-page text for AI matching
-    const fileInfoForAI: { fileName: string; filePath: string; fileSize: number; firstPageText: string }[] = [];
+    // Build file info with first-page text for AI matching (use in-memory bytes)
+    const fileInfoForAI: {
+      fileName: string;
+      filePath: string;
+      fileSize: number;
+      mimeType: string;
+      buffer: Buffer;
+      firstPageText: string;
+    }[] = [];
     for (const doc of savedDocs) {
       let firstPageText = "";
       try {
-        const fullPath = path.join(process.cwd(), "public", doc.filePath);
-        const buffer = await import("node:fs/promises").then(fs => fs.readFile(fullPath));
         if (doc.fileName.toLowerCase().endsWith(".pdf")) {
           const { PDFParse } = await import("pdf-parse");
-          const pdf = new PDFParse({ data: new Uint8Array(buffer) });
+          const pdf = new PDFParse({ data: new Uint8Array(doc.buffer) });
           const result = await pdf.getText();
           firstPageText = ((result as any).pages?.[0]?.text || "").slice(0, 500);
           pdf.destroy();
         } else {
-          firstPageText = buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
+          firstPageText = doc.buffer.toString("utf-8").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 500);
         }
       } catch {
         firstPageText = "";
@@ -213,6 +238,8 @@ Return ONLY a JSON array:
           fileName: doc.fileName,
           filePath: doc.filePath,
           fileSize: doc.fileSize,
+          mimeType: doc.mimeType,
+          data: doc.buffer,
           firstPageText: doc.firstPageText || null,
           aiMatchedToId: match?.matchedRequiredDocId || null,
           aiConfidence: match?.confidence || null,
@@ -283,7 +310,18 @@ Return ONLY a JSON array:
         processType: {
           include: { requiredDocuments: { where: { source: "CLIENT" } } },
         },
-        documents: true,
+        documents: {
+          select: {
+            id: true,
+            fileName: true,
+            filePath: true,
+            fileSize: true,
+            mimeType: true,
+            uploadedAt: true,
+            aiConfidence: true,
+            aiMatchedToId: true,
+          },
+        },
       },
     });
 

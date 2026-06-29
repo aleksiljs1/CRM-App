@@ -48,7 +48,17 @@ export async function GET() {
           },
         },
         documents: {
-          include: { aiMatchedTo: true },
+          // Never select `data` (raw bytes) in a list response.
+          select: {
+            id: true,
+            fileName: true,
+            filePath: true,
+            fileSize: true,
+            mimeType: true,
+            uploadedAt: true,
+            aiConfidence: true,
+            aiMatchedTo: { select: { id: true, documentName: true } },
+          },
           orderBy: { uploadedAt: "desc" },
         },
       },

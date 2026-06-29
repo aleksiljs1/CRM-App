@@ -223,6 +223,8 @@ model SubmittedDocument {
   fileName      String
   filePath      String
   fileSize      Int
+  mimeType      String?
+  data          Bytes?   // file contents stored in DB so they survive redeploys
   aiMatchedToId String?
   aiConfidence  Float?
   firstPageText String?

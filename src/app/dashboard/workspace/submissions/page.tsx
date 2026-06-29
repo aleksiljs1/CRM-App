@@ -189,10 +189,9 @@ export default function ClientDocumentsPage() {
                         </div>
                       </div>
                       <a
-                        href={d.filePath}
+                        href={`/api/submissions/${d.id}/download`}
                         target="_blank"
                         rel="noreferrer"
-                        download
                         className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
                       >
                         <Download className="h-3.5 w-3.5" />

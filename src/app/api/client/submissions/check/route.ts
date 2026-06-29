@@ -7,10 +7,13 @@ import { PDFParse } from "pdf-parse";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-async function extractText(filePath: string, fileName: string): Promise<string | null> {
+async function extractText(
+  data: Uint8Array | null,
+  fileName: string
+): Promise<string | null> {
   try {
-    const fullPath = path.join(process.cwd(), "public", filePath);
-    const buffer = await readFile(fullPath);
+    if (!data) return null;
+    const buffer = Buffer.from(data);
     const ext = path.extname(fileName).toLowerCase();
 
     if (ext === ".pdf") {
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
     // Extract text from uploaded documents
     const uploadedWithText = await Promise.all(
       uploadedDocs.map(async (doc) => {
-        const extractedText = await extractText(doc.filePath, doc.fileName);
+        const extractedText = await extractText(doc.data, doc.fileName);
         return {
           fileName: doc.fileName,
           filePath: doc.filePath,
