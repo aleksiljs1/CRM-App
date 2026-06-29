@@ -1570,7 +1570,7 @@ export default function HRTasksPage() {
       try {
         const { data } = await axios.post("/api/tasks/auto-assign");
         if (data.assigned > 0) {
-          toast.success(`${data.assigned} task(s) auto-assigned to reviewers`);
+          toast.success(`${data.assigned} task(s) auto-assigned`);
           fetchTasks();
         }
       } catch {

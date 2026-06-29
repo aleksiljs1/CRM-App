@@ -335,12 +335,14 @@ export default function ManagerSettingsPage() {
 
       {/* ── Auto-Assign Section ── */}
       <section>
-        <SectionLabel icon={Clock}>Review Auto-Assignment</SectionLabel>
+        <SectionLabel icon={Clock}>Task Auto-Assignment</SectionLabel>
         <div className="mt-3 rounded-xl border bg-card p-4 md:p-5 shadow-xs space-y-4">
           <p className="text-sm text-muted-foreground">
-            When a task is sent for review and no reviewer is assigned within
-            this time, the system will automatically assign it to the Senior or
-            Associate with the fewest active reviews in your department.
+            When any task stays unassigned in its current status (To Do, In
+            Progress, or Review) longer than this time, the system automatically
+            assigns it to the least-busy eligible person in your department.
+            Review tasks go to a Senior or Associate; other tasks go to the
+            available team member with the fewest active tasks.
           </p>
 
           <div className="flex items-center gap-4">

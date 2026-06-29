@@ -6,18 +6,26 @@ import { createNotification } from "@/lib/notify";
 /**
  * POST /api/tasks/auto-assign
  *
- * Auto-assigns unassigned REVIEW tasks to the Senior/Associate with the
- * fewest review tasks in that department.
+ * Auto-assigns ANY unassigned active task that has been sitting in its current
+ * status longer than the department's threshold (DepartmentSettings
+ * .autoAssignReviewHours, default 24h). It picks the least-busy eligible person
+ * in that department so work is load-balanced instead of stalling.
  *
- * Runs on:
- * - Manual trigger (manager clicks button)
- * - Called from the email poller interval (every 10s, checks if any tasks
- *   have been unassigned for > AUTO_ASSIGN_HOURS)
+ * - REVIEW tasks  -> assigned to the SENIOR/ASSOCIATE with the fewest review tasks
+ * - TODO / IN_PROGRESS tasks -> assigned to the doer (SENIOR/ASSOCIATE/JUNIOR/
+ *   ASSISTANT/INTERN) with the fewest active tasks
  *
- * Default: tasks unassigned for 24+ hours get auto-assigned.
+ * Terminal statuses (APPROVED, COMPLETED) are ignored.
+ *
+ * Runs on: manual trigger (manager button) and the background poller interval.
  */
 
 const DEFAULT_AUTO_ASSIGN_HOURS = 24;
+const ACTIVE_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW"] as const;
+
+// Who can pick up a task, by the status it is waiting in.
+const REVIEWER_ROLES = ["SENIOR", "ASSOCIATE"] as const;
+const DOER_ROLES = ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"] as const;
 
 export async function POST() {
   try {
@@ -26,51 +34,61 @@ export async function POST() {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get per-department settings
+    // Per-department thresholds (hours).
     const allSettings = await prisma.departmentSettings.findMany();
     const settingsMap = new Map(
       allSettings.map((s) => [s.department, s.autoAssignReviewHours])
     );
 
-    // Find all REVIEW tasks that are unassigned
-    const unassignedReviews = await prisma.task.findMany({
+    // All unassigned tasks still in an active status.
+    const unassigned = await prisma.task.findMany({
       where: {
-        status: "REVIEW",
+        status: { in: ACTIVE_STATUSES as unknown as string[] },
         assignedToId: null,
       },
       include: {
+        // Most recent time the task entered its CURRENT status.
         statusHistory: {
-          where: { toStatus: "REVIEW" },
           orderBy: { changedAt: "desc" },
-          take: 1,
         },
       },
     });
 
-    // Filter to tasks that exceeded their department's auto-assign threshold
-    const overdueReviews = unassignedReviews.filter((task) => {
-      const reviewEntry = task.statusHistory[0];
-      if (!reviewEntry) return false;
-      const hours = settingsMap.get(task.department as any) ?? DEFAULT_AUTO_ASSIGN_HOURS;
+    // Keep only tasks that have waited longer than their department threshold.
+    const overdue = unassigned.filter((task) => {
+      if (!task.department) return false;
+      // When did it enter its current status? Fall back to creation time.
+      const entered =
+        task.statusHistory.find((h) => h.toStatus === task.status)?.changedAt ||
+        task.createdAt;
+      const hours =
+        settingsMap.get(task.department as any) ?? DEFAULT_AUTO_ASSIGN_HOURS;
       const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-      return new Date(reviewEntry.changedAt) < cutoff;
+      return new Date(entered) < cutoff;
     });
 
-    if (overdueReviews.length === 0) {
-      return Response.json({ assigned: 0, message: "No overdue review tasks" });
+    if (overdue.length === 0) {
+      return Response.json({ assigned: 0, message: "No overdue tasks" });
     }
 
     const assigned: { taskId: string; taskTitle: string; assignedTo: string }[] = [];
 
-    for (const task of overdueReviews) {
-      // Find eligible reviewers in the same department
+    for (const task of overdue) {
       const dept = task.department;
       if (!dept) continue;
 
-      const eligibleReviewers = await prisma.user.findMany({
+      const isReview = task.status === "REVIEW";
+      const roles = (isReview ? REVIEWER_ROLES : DOER_ROLES) as unknown as string[];
+      // Balance review tasks by review load; other tasks by total active load.
+      const loadStatuses = isReview
+        ? ["REVIEW"]
+        : (ACTIVE_STATUSES as unknown as string[]);
+
+      // Find eligible people in the department, least-busy first.
+      const candidates = await prisma.user.findMany({
         where: {
           department: dept,
-          role: { in: ["SENIOR", "ASSOCIATE"] },
+          role: { in: roles },
           isActive: true,
         },
         select: {
@@ -79,83 +97,68 @@ export async function POST() {
           role: true,
           _count: {
             select: {
-              assignedTasks: {
-                where: { status: "REVIEW" },
-              },
+              assignedTasks: { where: { status: { in: loadStatuses } } },
             },
           },
         },
-        orderBy: {
-          assignedTasks: { _count: "asc" },
-        },
+        orderBy: { assignedTasks: { _count: "asc" } },
       });
 
-      if (eligibleReviewers.length === 0) continue;
+      if (candidates.length === 0) continue;
 
-      // Pick the one with fewest review tasks
-      const bestReviewer = eligibleReviewers[0];
+      const best = candidates[0];
 
-      // Assign the task
       await prisma.task.update({
         where: { id: task.id },
-        data: { assignedToId: bestReviewer.id },
+        data: { assignedToId: best.id },
       });
 
-      // Log it in status history
+      // Record the (re)assignment in history (status unchanged).
       await prisma.taskStatusHistory.create({
         data: {
           taskId: task.id,
-          fromStatus: "REVIEW",
-          toStatus: "REVIEW",
+          fromStatus: task.status,
+          toStatus: task.status,
           changedById: session.user.id,
         },
       });
 
-      // Create notification for the reviewer
+      const label = isReview ? "for review" : "to work on";
       await createNotification({
-        userId: bestReviewer.id,
-        title: "Review Auto-Assigned",
-        message: `'${task.title}' auto-assigned to you for review.`,
+        userId: best.id,
+        title: "Task Auto-Assigned",
+        message: `'${task.title}' was auto-assigned to you ${label}.`,
         type: "TASK",
         link: "/dashboard/workspace/tasks",
       });
 
-      // Notify the department manager about the auto-assignment
-      if (dept) {
-        const deptManager = await prisma.user.findFirst({
-          where: {
-            department: dept,
-            role: "MANAGER",
-            isActive: true,
-          },
-          select: { id: true },
+      // Let the department manager know.
+      const deptManager = await prisma.user.findFirst({
+        where: { department: dept, role: "MANAGER", isActive: true },
+        select: { id: true },
+      });
+      if (deptManager) {
+        await createNotification({
+          userId: deptManager.id,
+          title: "Task Auto-Assigned",
+          message: `'${task.title}' auto-assigned to ${best.name} ${label}.`,
+          type: "SYSTEM",
+          link: "/dashboard/workspace/tasks",
         });
-        if (deptManager) {
-          await createNotification({
-            userId: deptManager.id,
-            title: "Review Auto-Assigned",
-            message: `'${task.title}' auto-assigned to ${bestReviewer.name} for review.`,
-            type: "SYSTEM",
-            link: "/dashboard/workspace/tasks",
-          });
-        }
       }
 
       assigned.push({
         taskId: task.id,
         taskTitle: task.title,
-        assignedTo: bestReviewer.name,
+        assignedTo: best.name,
       });
 
       console.log(
-        `[AUTO-ASSIGN] "${task.title}" -> ${bestReviewer.name} (${bestReviewer.role}, ${dept})`
+        `[AUTO-ASSIGN] "${task.title}" (${task.status}) -> ${best.name} (${best.role}, ${dept})`
       );
     }
 
-    return Response.json({
-      assigned: assigned.length,
-      details: assigned,
-    });
+    return Response.json({ assigned: assigned.length, details: assigned });
   } catch (error) {
     console.error("[AUTO-ASSIGN] Error:", error);
     return Response.json(
