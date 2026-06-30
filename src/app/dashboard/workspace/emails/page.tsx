@@ -831,8 +831,8 @@ export default function HREmailsPage() {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Write your reply..."
-                  rows={5}
-                  className="w-full resize-y min-h-[120px] rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  rows={3}
+                  className="w-full resize-y min-h-[72px] max-h-[180px] overflow-y-auto rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       handleReply();

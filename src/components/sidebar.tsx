@@ -20,7 +20,6 @@ import {
   Menu,
   X,
   ScrollText,
-  Cog,
   ShieldCheck,
   Building2,
   ClipboardList,
@@ -87,12 +86,6 @@ const navItems: NavItem[] = [
     href: "/dashboard/workspace/performance",
     icon: Award,
     roles: ["SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
-  },
-  {
-    label: "Email Settings",
-    href: "/dashboard/settings/email",
-    icon: Settings,
-    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
   {
     label: "Clients",
@@ -186,10 +179,10 @@ const navItems: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
-    label: "System Settings",
-    href: "/dashboard/admin/settings",
-    icon: Cog,
-    roles: ["ADMIN"],
+    label: "Email Settings",
+    href: "/dashboard/settings/email",
+    icon: Settings,
+    roles: ["ADMIN", "PARTNER", "MANAGER", "SENIOR", "ASSOCIATE", "JUNIOR", "ASSISTANT", "INTERN"],
   },
 ];
 
