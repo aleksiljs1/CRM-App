@@ -274,12 +274,18 @@ function TaskCard({
           {priority.label}
         </Badge>
         {task.client && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 font-medium h-auto max-w-full whitespace-normal break-words text-left justify-start leading-snug"
+          >
             {task.client.companyName}
           </Badge>
         )}
         {task.department && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium bg-muted/50">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 font-medium h-auto max-w-full whitespace-normal break-words text-left justify-start leading-snug bg-muted/50"
+          >
             {task.department.replace("_", " ")}
           </Badge>
         )}
@@ -1776,8 +1782,8 @@ export default function HRTasksPage() {
 
       {/* Kanban Board */}
       {viewFilter === "ALL" ? (
-        <div className="-mx-3 sm:mx-0 overflow-x-auto md:overflow-x-visible">
-          <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[640px] md:min-w-[1000px] px-3 sm:px-0">
+        <div className="-mx-3 px-3 overflow-x-auto snap-x snap-mandatory lg:mx-0 lg:px-0 lg:overflow-visible">
+          <div className="flex gap-3 min-h-[60vh] lg:grid lg:grid-cols-5">
             {STATUSES.map((status) => {
               const config = STATUS_CONFIG[status];
               const statusTasks = tasksByStatus(status);
@@ -1785,7 +1791,7 @@ export default function HRTasksPage() {
               return (
                 <div
                   key={status}
-                  className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border`}
+                  className={`flex flex-col rounded-lg border-t-4 snap-start shrink-0 w-[82%] sm:w-[55%] lg:w-auto ${config.borderColor} ${config.bgColor} border border-border`}
                 >
                   {/* Column header */}
                   <div className="px-3 py-2 flex items-center justify-between">

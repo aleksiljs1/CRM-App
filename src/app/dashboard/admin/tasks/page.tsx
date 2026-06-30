@@ -280,12 +280,18 @@ function TaskCard({
           {priority.label}
         </Badge>
         {task.client && (
-          <Badge variant="outline" className="text-xs">
+          <Badge
+            variant="outline"
+            className="text-xs h-auto max-w-full whitespace-normal break-words text-left justify-start leading-snug"
+          >
             {task.client.companyName}
           </Badge>
         )}
         {task.department && (
-          <Badge variant="outline" className="text-xs bg-muted/50">
+          <Badge
+            variant="outline"
+            className="text-xs h-auto max-w-full whitespace-normal break-words text-left justify-start leading-snug bg-muted/50"
+          >
             {getDeptLabel(task.department)}
           </Badge>
         )}
@@ -1408,8 +1414,8 @@ export default function AdminTasksPage() {
       </div>
 
       {/* Kanban Board */}
-      <div className="-mx-3 overflow-x-auto sm:mx-0">
-        <div className="grid grid-cols-5 gap-3 min-h-[60vh] min-w-[640px] px-3 sm:min-w-0 sm:px-0">
+      <div className="-mx-3 px-3 overflow-x-auto snap-x snap-mandatory lg:mx-0 lg:px-0 lg:overflow-visible">
+        <div className="flex gap-3 min-h-[60vh] lg:grid lg:grid-cols-5">
         {STATUSES.map((status) => {
           const config = STATUS_CONFIG[status];
           const statusTasks = tasksByStatus(status);
@@ -1417,7 +1423,7 @@ export default function AdminTasksPage() {
           return (
             <div
               key={status}
-              className={`flex flex-col rounded-lg border-t-4 ${config.borderColor} ${config.bgColor} border border-border`}
+              className={`flex flex-col rounded-lg border-t-4 snap-start shrink-0 w-[82%] sm:w-[55%] lg:w-auto ${config.borderColor} ${config.bgColor} border border-border`}
             >
               <div className="px-3 py-2 flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground/80">
