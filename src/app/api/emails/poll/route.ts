@@ -43,13 +43,16 @@ export async function POST() {
     // Save each new email to the database, owned by this user.
     const saved = [];
     for (const emailData of newEmails) {
-      // Dedup within THIS user's inbox (by sender + subject + body start).
+      // Dedup within THIS user's inbox using a STABLE natural key: the sender,
+      // subject, and the message's Date header (stored as createdAt). The same
+      // message has a fixed Date, so re-polling matches and is skipped; two
+      // genuinely different messages won't share sender+subject+exact-timestamp.
       const existing = await prisma.email.findFirst({
         where: {
           userId: session.user.id,
           senderEmail: emailData.senderEmail,
           subject: emailData.subject,
-          body: emailData.body.slice(0, 200),
+          createdAt: emailData.date,
         },
       });
 

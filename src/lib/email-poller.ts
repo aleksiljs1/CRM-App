@@ -53,6 +53,13 @@ function buildImapConfig(creds: ImapCredentials) {
   };
 }
 
+/** Strip angle brackets / whitespace from a Message-ID style header value. */
+function normalizeMsgId(id?: string | null): string | null {
+  if (!id) return null;
+  const cleaned = id.replace(/[<>]/g, "").trim();
+  return cleaned || null;
+}
+
 /**
  * Detect department from email subject and body using keyword matching.
  */
@@ -129,14 +136,35 @@ async function fetchNewEmails(creds?: ImapCredentials) {
         // Detect department from content
         const recipientDept = detectDepartment(subject, body);
 
+        const date = parsed.date || new Date();
+
+        // Build a STABLE thread id so the same message always maps to the same
+        // thread (no more random ids creating duplicate "chats"), and real
+        // reply chains group under their root. Prefer the first References /
+        // In-Reply-To header (the conversation root), else the message's own
+        // Message-ID, else a deterministic hash of sender|subject|date.
+        const refs = Array.isArray(parsed.references)
+          ? parsed.references
+          : parsed.references
+          ? [parsed.references]
+          : [];
+        const rootRef = normalizeMsgId(refs[0]) || normalizeMsgId(parsed.inReplyTo);
+        const ownId = normalizeMsgId(parsed.messageId);
+        const fallback = `thread-${crypto
+          .createHash("sha1")
+          .update(`${senderEmail}|${subject}|${date.toISOString()}`)
+          .digest("hex")
+          .slice(0, 12)}`;
+        const threadId = rootRef || ownId || fallback;
+
         newEmails.push({
-          threadId: `thread-${crypto.randomUUID().slice(0, 8)}`,
+          threadId,
           senderEmail,
           senderName,
           subject,
           body,
           recipientDept,
-          date: parsed.date || new Date(),
+          date,
         });
       } catch (parseErr) {
         console.error("[IMAP] Failed to parse email:", parseErr);
