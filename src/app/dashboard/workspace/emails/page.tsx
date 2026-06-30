@@ -545,7 +545,7 @@ export default function HREmailsPage() {
       {/* ------ Main split layout - INDEPENDENT scrolling ------ */}
       <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
         {/* ====== LEFT: Email list ====== */}
-        <Card className="flex w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden min-h-[300px] md:min-h-0">
+        <Card className={`${selectedId ? "hidden md:flex" : "flex"} w-full md:w-[40%] md:min-w-[320px] flex-col overflow-hidden min-h-[300px] md:min-h-0`}>
           {loadingEmails ? (
             <EmailListSkeleton />
           ) : emails.length === 0 ? (
@@ -831,8 +831,8 @@ export default function HREmailsPage() {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Write your reply..."
-                  rows={3}
-                  className="w-full resize-y min-h-[72px] max-h-[180px] overflow-y-auto rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  rows={2}
+                  className="w-full resize-y min-h-[52px] max-h-[140px] md:min-h-[72px] md:max-h-[180px] overflow-y-auto rounded-xl border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       handleReply();
@@ -918,7 +918,7 @@ export default function HREmailsPage() {
                     </Button>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground/50">
+                <p className="mt-2 hidden text-xs text-muted-foreground/50 md:block">
                   Press Ctrl+Enter to send
                 </p>
               </div>
