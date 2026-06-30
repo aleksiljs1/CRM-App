@@ -421,9 +421,9 @@ export default function HREmailsPage() {
 
   // ---- Render ----
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col gap-4">
+    <div className="flex h-[calc(100dvh-6rem)] md:h-[calc(100vh-10rem)] flex-col gap-4">
       {/* ------ Header ------ */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className={`${selectedId ? "hidden md:flex" : "flex"} flex-col gap-3 md:flex-row md:items-center md:justify-between`}>
         <div className="min-w-0">
           <h1 className="text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-400">
             Emails
@@ -484,7 +484,7 @@ export default function HREmailsPage() {
       )}
 
       {/* ------ Filter tabs + Search + AI prioritize ------ */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`${selectedId ? "hidden md:flex" : "flex"} flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
         <div className="inline-flex flex-wrap gap-1 rounded-full border border-border bg-muted/50 p-1">
           {(["all", "unread", "read", "unreplied", "replied", ...(orderedIds.length > 0 ? ["ordered" as const] : [])] as const).map((f) => {
             const isActive = filter === f;
